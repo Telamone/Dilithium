@@ -1,16 +1,16 @@
-package it.telami.commons.crypto;
+package it.telami.commons.crypto.dilithium;
 
 import java.security.KeyPair;
 
 final class Dilithium {
 	static KeyPair generateKeyPair (final DilithiumParameterSpec spec, final byte[] seed) {
-		byte[] pu = Utils.getSHAKE256Digest(128, seed);
-		final byte[] rho = new byte[32];
-		byte[] pr = new byte[64];
-		final byte[] K = new byte[32];
-		System.arraycopy(pu, 0, rho, 0, 32);
-		System.arraycopy(pu, 32, pr, 0, 64);
-		System.arraycopy(pu, 96, K, 0, 32);
+		byte[] pu;
+		final int tilde;
+		final byte[] rho, k;
+		byte[] pr;
+		System.arraycopy(pu = Utils.getSHAKE256Digest(((tilde = spec.tilde) << 1) + 64, seed), 0, rho = new byte[tilde], 0, tilde);
+		System.arraycopy(pu, tilde + 64, k = new byte[tilde], 0, tilde);
+		System.arraycopy(pu, tilde, pr = new byte[64], 0, 64);
 		final PolyVec[] a = expandA(rho, spec.k, spec.l);
 		final PolyVec s1, s1hat, s2, t1, res = (t1 = (s1hat = (s1 = PolyVec
 				.randomVec(pr, spec.eta, spec.l, 0))
@@ -22,30 +22,31 @@ final class Dilithium {
 				.c_ADD_q())
 				.powerRound();
 		return new KeyPair(
-				new DilithiumPublicKeyImpl(spec, rho, t1, pu = PackingUtils.packPubKey(rho, t1), a),
-				new DilithiumPrivateKeyImpl(spec, rho, K, pr = Utils.crh(pu), s1, s2, res, PackingUtils.packPrvKey(spec.eta, rho, pr, K, res, s1, s2), a, s1hat, s2.ntt(), res.ntt()));
+				new DilithiumPublicKeyImpl(spec, rho, t1, pu = PackingUtils.packPubKey(tilde, rho, t1), a),
+				new DilithiumPrivateKeyImpl(spec, rho, k, pr = Utils.crh(pu), s1, s2, res, PackingUtils.packPrvKey(spec.eta, tilde, rho, k, pr, s1, s2, res), a, s1hat, s2.ntt(), res.ntt()));
 	}
 	
 	static byte[] sign (final DilithiumPrivateKeyImpl prv, final byte[] m) {
 		final DilithiumParameterSpec spec;
 		final byte[] sig
 				= new byte[Utils.getSigLength(spec = prv.getSpec())], mu, rhoPrime
-				= Utils.mu_crh(Utils.concatOrCopy(prv.getK(), mu
-				= Utils.mu_crh(Utils.concatOrCopy(prv.getTr(), m))));
+				= Utils.mu_crh(Utils.concatOrCopy(prv.k, mu
+				= Utils.mu_crh(Utils.concatOrCopy(prv.tr, m))));
 		final PolyVec[] a = prv.a;
 		final int
 				mul = mu.length,
 				l = spec.l,
 				g1 = spec.gamma1,
 				g2 = spec.gamma2,
+				tilde = spec.tilde,
 				tau = spec.tau,
 				beta = spec.beta,
 				omega = spec.omega;
 		int kappa = -1;
 		final PolyVec
-				s1 = prv.getS1Hat(),
-				s2 = prv.getS2Hat(),
-				t0 = prv.getT0Hat();
+				s1 = prv.s1Hat,
+				s2 = prv.s2Hat,
+				t0 = prv.t0Hat;
 		PolyVec z, y, w, res;
 		Digest s;
 		Poly cp;
@@ -69,10 +70,10 @@ final class Dilithium {
 					.length
 					* PackingUtils
 					.getPolyW1PackedBytes(g2));
-			s.doOutput(sig, 0, 32);
+			s.doOutput(sig, 0, tilde);
 			if ((z = s1.copyAndPointWiseMontgomery(cp
 					= generateChallenge
-					(tau, sig)
+					(tilde, tau, sig)
 					.ntt()))
 					.invNTTtoMont()
 					.add(y)
@@ -92,7 +93,7 @@ final class Dilithium {
 					(g2, w.add(y).c_ADD_q(), res))
 					.cnt)
 				continue;
-			PackingUtils.packSig(g1, omega, sig, sig, z, h.v);
+			PackingUtils.packSig(g1, omega, tilde, sig, sig, z, h.v);
 			return sig;
 		}
 	}
@@ -103,9 +104,15 @@ final class Dilithium {
 		final DilithiumParameterSpec spec;
 		if (Utils.getSigLength(spec = pk.getSpec()) != sig.length)
 			throw new DilithiumSignatureVerificationException("Invalid signature length");
-		final byte[] mu, buf, c2, cappedSign = new byte[32];
-		System.arraycopy(sig, 0, cappedSign, 0, 32);
-		int off = 32;
+		final byte[] mu, buf, c2, cappedSign;
+		final int tilde;
+		int off;
+		System.arraycopy(
+				sig,
+				0,
+				cappedSign = new byte[tilde = off = spec.tilde],
+				0,
+				tilde);
 		final int l = spec.l, g1 = spec.gamma1, g2 = spec.gamma2;
 		PolyVec z = new PolyVec(l);
 		for (int
@@ -140,11 +147,14 @@ final class Dilithium {
 		z = useHint(g2, z
 				.ntt()
 				.mulMatrixPointWiseMontgomery(pk.a)
-				.sub(pk.getT1()
+				.sub(pk.t1
 						.copyAndShift()
 						.ntt()
 						.copyAndPointWiseMontgomery(
-								generateChallenge(spec.tau, cappedSign)
+								generateChallenge(
+										tilde,
+										spec.tau,
+										cappedSign)
 										.ntt()))
 				.reduce()
 				.invNTTtoMont()
@@ -152,8 +162,8 @@ final class Dilithium {
 		mu = Utils.getSHAKE256Digest(64, Utils.crh(pk.getEncoded()), m);
 		buf = new byte[PackingUtils.getPolyW1PackedBytes(g2) * z.poly.length];
 		PackingUtils.packW1(g2, z, buf);
-		c2 = Utils.getSHAKE256Digest(32, mu, buf);
-		for (int i = 0; i < 32; i++)
+		c2 = Utils.getSHAKE256Digest(tilde, mu, buf);
+		for (int i = 0; i < tilde; i++)
 			if (cappedSign[i] != c2[i])
 				return false;
 		return true;
@@ -253,13 +263,15 @@ final class Dilithium {
 				&& a1 == 0) ? 0 : 1;
 	}
 
-	private static Poly generateChallenge (final int tau, final byte[] seed) {
+	private static Poly generateChallenge (final int tilde,
+										   final int tau,
+										   final byte[] seed) {
 		final Poly pre = new Poly();
 		int b, pos;
 		long signs;
 		final byte[] buf = new byte[136];
 		final Digest s = new Digest(256);
-		s.update(seed, 32);
+		s.update(seed, tilde);
 		s.doOutput(buf, 0, 136);
 		signs = 0L;
 		for (int i = 0; i < 8; i++)

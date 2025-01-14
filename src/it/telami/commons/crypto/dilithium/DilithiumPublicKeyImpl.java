@@ -1,9 +1,9 @@
-package it.telami.commons.crypto;
+package it.telami.commons.crypto.dilithium;
 
 final class DilithiumPublicKeyImpl implements DilithiumPublicKey {
 	private final DilithiumParameterSpec spec;
 	final byte[] rho;
-	private final PolyVec t1;
+	final PolyVec t1;
 	private final byte[] pubBytes;
 	final PolyVec[] a;
 
@@ -33,11 +33,6 @@ final class DilithiumPublicKeyImpl implements DilithiumPublicKey {
 	@Override
 	public DilithiumParameterSpec getSpec () {
 		return spec;
-	}
-
-	@Override
-	public PolyVec getT1 () {
-		return t1;
 	}
 
 	@Override

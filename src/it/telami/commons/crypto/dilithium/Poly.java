@@ -1,4 +1,4 @@
-package it.telami.commons.crypto;
+package it.telami.commons.crypto.dilithium;
 
 final class Poly {
 	private static final long[] zetas = new long[] {

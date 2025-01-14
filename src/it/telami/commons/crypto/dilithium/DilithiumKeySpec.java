@@ -1,4 +1,4 @@
-package it.telami.commons.crypto;
+package it.telami.commons.crypto.dilithium;
 
 import java.security.spec.KeySpec;
 

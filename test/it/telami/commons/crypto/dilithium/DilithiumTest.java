@@ -1,23 +1,9 @@
-# Dilithium
+package it.telami.commons.crypto.dilithium;
 
-This is a modified version of
-<a href="https://github.com/mthiim/dilithium-java">this repository</a>
-adapted to my needs.<br>
+import java.security.*;
 
-It's also included in my personal
-<a href="https://github.com/Telamone/TelLibrary">java libraries</a>
-as it's used for secure data authentication.
-
-In future updates I'll probably try improving code quality and speed
-attaching some benchmarks.<br>
-As for now, this is only a simple rework of the already existing library.<br>
-
-For more information, I would recommend to visit the original repository.
-
-# Demo
-
-Code:
-
+final class DilithiumTest {
+    public static void main (final String[] args) throws Throwable {
         Security.addProvider(new DilithiumProvider());
 
         final KeyPairGenerator kpg = KeyPairGenerator.getInstance("Dilithium");
@@ -44,9 +30,5 @@ Code:
 
         signature.update("MODIFIED!!!".getBytes());
         System.out.println("This doesn't work, right? " + !signature.verify(sign));
-
-Output:
-
-        This works, right? true
-        Let's try changing the message...
-        This doesn't work, right? true
+    }
+}

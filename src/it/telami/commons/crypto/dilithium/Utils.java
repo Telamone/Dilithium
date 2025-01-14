@@ -1,4 +1,4 @@
-package it.telami.commons.crypto;
+package it.telami.commons.crypto.dilithium;
 
 final class Utils {
 	private Utils () {}
@@ -37,6 +37,6 @@ final class Utils {
 	}
 
 	static int getSigLength (final DilithiumParameterSpec spec) {
-		return 32 + spec.omega + PackingUtils.getPolyZPackedBytes(spec.gamma1) * spec.l + spec.k;
+		return spec.tilde + spec.omega + PackingUtils.getPolyZPackedBytes(spec.gamma1) * spec.l + spec.k;
 	}
 }

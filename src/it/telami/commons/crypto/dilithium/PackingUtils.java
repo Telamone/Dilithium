@@ -1,4 +1,4 @@
-package it.telami.commons.crypto;
+package it.telami.commons.crypto.dilithium;
 
 final class PackingUtils {
 	static Poly etaUnpack (final int eta,
@@ -34,34 +34,35 @@ final class PackingUtils {
 	}
 
 	static int getPolyEtaPackedBytes (final int eta) {
-		return eta == 2 ? 96 : 128;
+		return eta != 2 ? 128 : 96;
 	}
 
 	static int getPolyW1PackedBytes (final int gamma2) {
-		return gamma2 == 261888 ? 128 : 192;
+		return gamma2 != 261888 ? 192 : 128;
 	}
 
 	static int getPolyZPackedBytes (final int gamma1) {
-		return gamma1 == 131072 ? 576 : 640;
+		return gamma1 != 131072 ? 640 : 576;
 	}
 
 	static byte[] packPrvKey (final int eta,
+							  final int tilde,
 							  final byte[] rho,
-							  final byte[] tr,
 							  final byte[] k,
-							  final PolyVec t0,
+							  final byte[] tr,
 							  final PolyVec s1,
-							  final PolyVec s2) {
+							  final PolyVec s2,
+							  final PolyVec t0) {
 		final int
 				s1l = s1.poly.length,
 				s2l = s2.poly.length,
 				t0l = t0.poly.length;
 		final int p = getPolyEtaPackedBytes(eta);
-		final byte[] buf = new byte[96 + s1l * p + s2l * (p + 416)];
-        System.arraycopy(rho, 0, buf, 0, 32);
-        System.arraycopy(k, 0, buf, 32, 32);
-        System.arraycopy(tr, 0, buf, 64, 32);
-		int off = 96 - p;
+		final byte[] buf = new byte[(tilde << 1) + 32 + s1l * p + s2l * (p + 416)];
+        System.arraycopy(rho, 0, buf, 0, tilde);
+        System.arraycopy(k, 0, buf, tilde, tilde);
+        System.arraycopy(tr, 0, buf, tilde << 1, 32);
+		int off = (tilde << 1) + 32 - p;
 		for (int i = 0; i < s1l; i++)
 			s1.poly[i].etaPack(buf, off += p, eta);
 		for (int i = 0; i < s2l; i++)
@@ -72,28 +73,30 @@ final class PackingUtils {
 		return buf;
 	}
 
-	static byte[] packPubKey (final byte[] rho, final PolyVec t) {
+	static byte[] packPubKey (final int tilde,
+							  final byte[] rho,
+							  final PolyVec t) {
 		final int tl = t.poly.length;
-		final byte[] pk = new byte[32 + tl * 320];
-        System.arraycopy(rho, 0, pk, 0, 32);
+		final byte[] pk = new byte[tilde + tl * 320];
+        System.arraycopy(rho, 0, pk, 0, tilde);
 		for (int i = 0; i < tl; i++)
-			t.poly[i].t1Pack(pk, 32 + i * 320);
+			t.poly[i].t1Pack(pk, tilde + i * 320);
 		return pk;
 	}
 
 	static void packSig (final int gamma1,
 						 final int omega,
+						 final int tilde,
 						 final byte[] sig,
 						 final byte[] c,
 						 final PolyVec z,
 						 final PolyVec h) {
-		final int polyZPackedBytes = getPolyZPackedBytes(gamma1);
-        System.arraycopy(c, 0, sig, 0, 32);
-		int off = 32, l = z.poly.length;
-		for (int i = 0; i < l; i++) {
-			z.poly[i].zPack(gamma1, sig, off);
-			off += polyZPackedBytes;
-		}
+		final int polyZPackedBytes;
+        System.arraycopy(c, 0, sig, 0, tilde);
+		int off = tilde - (polyZPackedBytes = getPolyZPackedBytes(gamma1)), l = z.poly.length;
+		for (int i = 0; i < l; i++)
+			z.poly[i].zPack(gamma1, sig, off += polyZPackedBytes);
+		off += polyZPackedBytes;
 		/* Encode h */
 		l = omega + h.poly.length;
 		for (int i = 0; i < l; i++)
@@ -166,14 +169,14 @@ final class PackingUtils {
 	}
 
 	static DilithiumPrivateKey unpackPrivateKey (final DilithiumParameterSpec parameterSpec, final byte[] bytes) {
-		final int eta = parameterSpec.eta, polyEtaPackedBytes = getPolyEtaPackedBytes(eta);
-		final byte[] rho = new byte[32];
-        System.arraycopy(bytes, 0, rho, 0, 32);
-		final byte[] key = new byte[32];
-        System.arraycopy(bytes, 32, key, 0, 32);
-		final byte[] tr = new byte[32];
-        System.arraycopy(bytes, 64, tr, 0, 32);
-		int off = 96 - polyEtaPackedBytes;
+		final int eta = parameterSpec.eta, polyEtaPackedBytes = getPolyEtaPackedBytes(eta), tilde;
+		final byte[] rho;
+        System.arraycopy(bytes, 0, rho = new byte[tilde = parameterSpec.tilde], 0, tilde);
+		final byte[] key;
+        System.arraycopy(bytes, tilde, key = new byte[tilde], 0, tilde);
+		final byte[] tr;
+        System.arraycopy(bytes, tilde << 1, tr = new byte[32], 0, 32);
+		int off = (tilde << 1) + 32 - polyEtaPackedBytes;
 		final int l, k;
 		final PolyVec s1 = new PolyVec(l = parameterSpec.l);
 		for (int i = 0; i < l; i++)
@@ -201,9 +204,10 @@ final class PackingUtils {
 	}
 
 	static DilithiumPublicKey unpackPublicKey (final DilithiumParameterSpec parameterSpec, final byte[] bytes) {
-		final byte[] rho = new byte[32];
-        System.arraycopy(bytes, 0, rho, 0, 32);
-		int off = 32 - 320;
+		final int tilde;
+		final byte[] rho;
+        System.arraycopy(bytes, 0, rho = new byte[tilde = parameterSpec.tilde], 0, tilde);
+		int off = tilde - 320;
 		final int k;
 		final PolyVec p = new PolyVec(k = parameterSpec.k);
 		for (int i = 0; i < k; i++)
@@ -220,7 +224,16 @@ final class PackingUtils {
 						 final byte[] sig,
 						 final int off) {
 		final Poly pre = new Poly();
-		if (gamma1 == 131072) for (int i = 0; i < 64; i++) {
+		if (gamma1 != 131072) for (int i = 0; i < 128; ++i) {
+			pre.cof[2 * i    ]  = sig[off + 5 * i    ]       & 0xff;
+			pre.cof[2 * i    ] |= sig[off + 5 * i + 1] << 8  & 0xff00;
+			pre.cof[2 * i    ] |= sig[off + 5 * i + 2] << 16 & 0xf0000;
+			pre.cof[2 * i + 1]  = sig[off + 5 * i + 2] >> 4  & 0xf;
+			pre.cof[2 * i + 1] |= sig[off + 5 * i + 3] << 4  & 0xff0;
+			pre.cof[2 * i + 1] |= sig[off + 5 * i + 4] << 12 & 0xff000;
+			pre.cof[2 * i    ] = gamma1 - pre.cof[2 * i    ];
+			pre.cof[2 * i + 1] = gamma1 - pre.cof[2 * i + 1];
+		} else for (int i = 0; i < 64; i++) {
 			pre.cof[4 * i    ]  = sig[off + 9 * i    ]       & 0xff;
 			pre.cof[4 * i    ] |= sig[off + 9 * i + 1] << 8  & 0xff00;
 			pre.cof[4 * i    ] |= sig[off + 9 * i + 2] << 16 & 0x30000;
@@ -237,15 +250,6 @@ final class PackingUtils {
 			pre.cof[4 * i + 1] = gamma1 - pre.cof[4 * i + 1];
 			pre.cof[4 * i + 2] = gamma1 - pre.cof[4 * i + 2];
 			pre.cof[4 * i + 3] = gamma1 - pre.cof[4 * i + 3];
-		} else for (int i = 0; i < 128; ++i) {
-			pre.cof[2 * i    ]  = sig[off + 5 * i    ]       & 0xff;
-			pre.cof[2 * i    ] |= sig[off + 5 * i + 1] << 8  & 0xff00;
-			pre.cof[2 * i    ] |= sig[off + 5 * i + 2] << 16 & 0xf0000;
-			pre.cof[2 * i + 1]  = sig[off + 5 * i + 2] >> 4  & 0xf;
-			pre.cof[2 * i + 1] |= sig[off + 5 * i + 3] << 4  & 0xff0;
-			pre.cof[2 * i + 1] |= sig[off + 5 * i + 4] << 12 & 0xff000;
-			pre.cof[2 * i    ] = gamma1 - pre.cof[2 * i    ];
-			pre.cof[2 * i + 1] = gamma1 - pre.cof[2 * i + 1];
 		}
 		return pre;
 	}

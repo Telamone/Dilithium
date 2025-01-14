@@ -1,24 +1,23 @@
-package it.telami.commons.crypto;
+package it.telami.commons.crypto.dilithium;
 
 final class DilithiumPrivateKeyImpl implements DilithiumPrivateKey {
 	private final DilithiumParameterSpec spec;
-	//Probably here just for serialization purpose...
 	final byte[] rho;
-	private final byte[] K;
-	private final byte[] tr;
+	final byte[] k;
+	final byte[] tr;
 	final PolyVec s1;
 	final PolyVec s2;
 	final PolyVec t0;
 	private final byte[] prvBytes;
 	final PolyVec[] a;
-	private final PolyVec s1Hat;
-	private final PolyVec s2Hat;
-	private final PolyVec t0Hat;
+	final PolyVec s1Hat;
+	final PolyVec s2Hat;
+	final PolyVec t0Hat;
 
 	DilithiumPrivateKeyImpl (
 			final DilithiumParameterSpec spec,
 			final byte[] rho,
-			final byte[] K,
+			final byte[] k,
 			final byte[] tr,
 			final PolyVec s1,
 			final PolyVec s2,
@@ -30,7 +29,7 @@ final class DilithiumPrivateKeyImpl implements DilithiumPrivateKey {
 			final PolyVec t0Hat) {
 		this.spec = spec;
 		this.rho = rho;
-		this.K = K;
+		this.k = k;
 		this.tr = tr;
 		this.s1 = s1;
 		this.s2 = s2;
@@ -58,32 +57,7 @@ final class DilithiumPrivateKeyImpl implements DilithiumPrivateKey {
 	}
 
 	@Override
-	public byte[] getK () {
-		return K;
-	}
-
-	@Override
-	public byte[] getTr () {
-		return tr;
-	}
-
-	@Override
 	public byte[] getEncoded () {
 		return prvBytes;
-	}
-
-	@Override
-	public PolyVec getS1Hat () {
-		return s1Hat;
-	}
-
-	@Override
-	public PolyVec getS2Hat () {
-		return s2Hat;
-	}
-
-	@Override
-	public PolyVec getT0Hat () {
-		return t0Hat;
 	}
 }
