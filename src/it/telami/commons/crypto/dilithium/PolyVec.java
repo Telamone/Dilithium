@@ -37,7 +37,7 @@ public final class PolyVec {
 				.parallel()
 				.mapToObj(i -> Poly.genRandomGamma1(
 						seed,
-						nonce + i,
+						length * nonce + i,
 						gamma1))
 				.toArray(Poly[]::new));
 	}

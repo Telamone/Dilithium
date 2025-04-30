@@ -44,9 +44,9 @@ public final class DilithiumParameterSpec implements AlgorithmParameterSpec {
 		this.omega = omega;
 	}
 	
-	public final static DilithiumParameterSpec LEVEL_2 = new DilithiumParameterSpec("it.telami.commons.crypto.Dilithium level 2 parameters", 4, 4, 131072, 95232, 32, 39, 13, 192, 2, 78, 80);
-	public final static DilithiumParameterSpec LEVEL_3 = new DilithiumParameterSpec("it.telami.commons.crypto.Dilithium level 3 parameters", 6, 5, 524288, 261888, 48, 49, 13, 225, 4, 196, 55);
-	public final static DilithiumParameterSpec LEVEL_5 = new DilithiumParameterSpec("it.telami.commons.crypto.Dilithium level 5 parameters", 8, 7, 524288, 261888, 64, 60, 13, 257, 2, 120, 75);
+	public final static DilithiumParameterSpec LEVEL_2 = new DilithiumParameterSpec("Dilithium level 2 parameters", 4, 4, 131072, 95232, 32, 39, 13, 192, 2, 78, 80);
+	public final static DilithiumParameterSpec LEVEL_3 = new DilithiumParameterSpec("Dilithium level 3 parameters", 6, 5, 524288, 261888, 48, 49, 13, 225, 4, 196, 55);
+	public final static DilithiumParameterSpec LEVEL_5 = new DilithiumParameterSpec("Dilithium level 5 parameters", 8, 7, 524288, 261888, 64, 60, 13, 257, 2, 120, 75);
 
 	public String toString () {
 		return name;
