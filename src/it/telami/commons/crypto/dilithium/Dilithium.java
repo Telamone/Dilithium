@@ -173,9 +173,11 @@ final class Dilithium {
 							  final int k,
 							  final int l) {
 		final PolyVec[] a = new PolyVec[k];
-		for (int i = 0; i < k; i++) {
+		int i = -1, j;
+		while (++i < k) {
 			a[i] = new PolyVec(l);
-			for (int j = 0; j < l; j++)
+			j = -1;
+			while (++j < l)
 				a[i].poly[j] = Poly.genUniformRandom(rho, (i << 8) + j);
 		}
 		return a;
@@ -185,30 +187,32 @@ final class Dilithium {
 									final PolyVec u,
 									final PolyVec h) {
 		final int l = u.poly.length;
-		for (int i = 0; i < l; i++)
+		int i = -1;
+		while (++i < l)
 			useHint(gamma2, u.poly[i], h.poly[i]);
 		return u;
 	}
 	private static void useHint (final int gamma2,
 								 final Poly u,
 								 final Poly h) {
-		for (int i = 0; i < 256; i++)
-			u.cof[i] = useHint(gamma2, u.cof[i], h.cof[i]);
+		int i = -1;
+		while (i < 255)
+			u.cof[++i] = useHint(gamma2, u.cof[i], h.cof[i]);
 	}
 	private static int useHint (final int gamma2,
 								int a,
 								final int hint) {
 		int a1;
 		if (gamma2 == 261888)
-			a1 = (a + 127 >> 7) * 1025 + (1 << 21) >> 22 & 15;
+			a1 = (a + 127 >> 7) * 1025 + 2097152 >> 22 & 15;
 		else {
-			a1 = (a + 127 >> 7) * 11275 + (1 << 23) >> 24;
+			a1 = (a + 127 >> 7) * 11275 + 8388608 >> 24;
 			a1 ^= 43 - a1 >> 31 & a1;
 		}
 		if (hint == 0)
 			return a1;
-		a -= a1 * 2 * gamma2;
-		a -= (0x7fe001 - 1) / 2 - a >> 31 & 0x7fe001;
+		a -= a1 * gamma2 << 1;
+		a -= 0x3ff000 - a >> 31 & 0x7fe001;
 		return gamma2 == 261888
 				? a > 0
 				? a1 + 1 & 15
@@ -236,7 +240,8 @@ final class Dilithium {
 		final Hints hints = new Hints();
 		final int l = v0.poly.length;
 		hints.v = new PolyVec(l);
-		for (int i = 0; i < l; i++) {
+		int i = -1;
+		while (++i < l) {
 			final Hint hint = polyMakeHint(gamma2, v0.poly[i], v1.poly[i]);
 			hints.cnt += hint.cnt;
 			hints.v.poly[i] = hint.v;
@@ -247,10 +252,11 @@ final class Dilithium {
 	private static Hint polyMakeHint (final int gamma2,
 									  final Poly a,
 									  final Poly b) {
-		final Hint hint = new Hint();
-		hint.v = new Poly();
-		for (int i = 0; i < 256; i++)
-			hint.cnt += hint.v.cof[i] = makeHint(gamma2, a.cof[i], b.cof[i]);
+		final Hint hint;
+		(hint = new Hint()).v = new Poly();
+		int i = -1;
+		while (i < 255)
+			hint.cnt += hint.v.cof[++i] = makeHint(gamma2, a.cof[i], b.cof[i]);
 		return hint;
 	}
 

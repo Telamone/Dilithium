@@ -4,18 +4,27 @@ final class Utils {
 	private Utils () {}
 
 	static byte[] concatOrCopy (final byte[]... arr) {
-		final byte[] r;
-		if (arr.length == 2) {
-			final int s0 = arr[0].length, s1 = arr[1].length;
-			r = new byte[s0 + s1];
-			System.arraycopy(arr[0], 0, r, 0, s0);
-			System.arraycopy(arr[1], 0, r, s0, s1);
-		} else {
-			final int s0 = arr[0].length;
-			r = new byte[s0];
-			System.arraycopy(arr[0], 0, r, 0, s0);
-		}
-		return r;
+		if (arr.length != 1) {
+			assert arr.length > 1;
+			final byte[] r;
+			final int s0, s1;
+			System.arraycopy(
+					arr[0],
+					0,
+					r = new byte[(s0
+							= arr[0].length)
+							+ (s1
+							= arr[1].length)],
+					0,
+					s0);
+			System.arraycopy(
+					arr[1],
+					0,
+					r,
+					s0,
+					s1);
+			return r;
+		} else return arr[0].clone();
 	}
 
 	static byte[] getSHAKE256Digest (final int sz,

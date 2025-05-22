@@ -100,8 +100,8 @@ final class Digest {
                         dataQueue,
                         0,
                         output,
-                        offset + (int) (i / 8),
-                        partialBlock / 8);
+                        offset + (int) (i >> 3),
+                        partialBlock >> 3);
                 bitsInQueue = rate - partialBlock;
             } else {
                 partialBlock = (int) Math.min(
@@ -109,10 +109,10 @@ final class Digest {
                         outputLength - i);
                 System.arraycopy(
                         dataQueue,
-                        (rate - bitsInQueue) / 8,
+                        (rate - bitsInQueue) >> 3,
                         output,
-                        offset + (int) (i / 8),
-                        partialBlock / 8);
+                        offset + (int) (i >> 3),
+                        partialBlock >> 3);
                 bitsInQueue -= partialBlock;
             }
             i += partialBlock;
