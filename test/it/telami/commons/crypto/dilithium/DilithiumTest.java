@@ -3,7 +3,7 @@ package it.telami.commons.crypto.dilithium;
 import java.security.*;
 
 final class DilithiumTest {
-    public static void main (final String[] args) throws Throwable {
+    public static void main (final String[] ignored) throws Throwable {
         Security.addProvider(new DilithiumProvider());
 
         final KeyPairGenerator kpg = KeyPairGenerator.getInstance("Dilithium");
