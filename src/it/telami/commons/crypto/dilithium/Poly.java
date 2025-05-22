@@ -197,14 +197,16 @@ final class Poly {
 
 	Poly multiplyAndReduce (final Poly other) {
 		final Poly c = new Poly();
-		for (int i = 0; i < 256; i++)
-			c.cof[i] = reduce((long) cof[i] * other.cof[i]);
+		int i = -1;
+		while (i < 255)
+			c.cof[++i] = reduce((long) cof[i] * other.cof[i]);
 		return c;
 	}
 
 	void reduce () {
-		for (int i = 0; i < 256; i++)
-			cof[i] += (cof[i] + 0x400000 >> 23) * 0xff801fff;
+		int i = -1;
+		while (i < 255)
+			cof[++i] += (cof[i] + 0x400000 >> 23) * 0xff801fff;
 	}
 
 	void invNTTtoMont () {
@@ -220,19 +222,22 @@ final class Poly {
 					cof[j + len] = reduce(zeta * cof[j + len]);
 				}
 			}
-		for (j = 0; j < 256; ++j)
-			cof[j] = reduce(41978L * cof[j]);
+		j = -1;
+		while (j < 255)
+			cof[++j] = reduce(41978L * cof[j]);
 	}
 
 	void c_ADD_q () {
-		for (int i = 0; i < 256; i++)
-			cof[i] += cof[i] >> 31 & 0x7fe001;
+		int i = -1;
+		while (i < 255)
+			cof[++i] += cof[i] >> 31 & 0x7fe001;
 	}
 
 	Poly powerRound () {
 		final Poly o = new Poly();
-		for (int i = 0; i < 256; i++)
-			o.cof[i]
+		int i = -1;
+		while (i < 255)
+			o.cof[++i]
 					= cof[i]
 					- ((cof[i]
 					= cof[i]
@@ -381,8 +386,9 @@ final class Poly {
 
 	Poly decompose (final int gamma2) {
 		final Poly o = new Poly();
-		for (int i = 0; i < 256; i++) {
-			final int a = cof[i];
+		int i = -1;
+		while (i < 255) {
+			final int a = cof[++i];
 			int a1 = a + 127 >> 7;
 			if (gamma2 == 261888)
 				a1 = a1 * 1025 + 2097152 >> 22 & 15;
@@ -419,8 +425,9 @@ final class Poly {
 		 * for each coefficient is independent of secret data, but we must not leak the
 		 * sign of the centralized representative.
 		 */
-		for (int i = 0; i < 256; i++)
-			if (cof[i] - (cof[i] >> 31 & 2 * cof[i]) >= b)
+		int i = -1;
+		while (i < 255)
+			if (cof[++i] - (cof[i] >> 31 & 2 * cof[i]) >= b)
 				return true;
 		return false;
 	}
@@ -465,8 +472,9 @@ final class Poly {
 
 	Poly shiftL () {
 		final Poly c = new Poly();
-		for (int i = 0; i < 256; i++)
-			c.cof[i] = cof[i] << 13;
+		int i = -1;
+		while (i < 255)
+			c.cof[++i] = cof[i] << 13;
 		return c;
 	}
 }

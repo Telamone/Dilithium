@@ -11,17 +11,17 @@ import java.util.stream.IntStream;
 final class DilithiumBenchmark {
 
     /* Last Benchmark Output:
-     * Telami's Dilithium sign:   411214 ns/ops
-     * Telami's Dilithium verify: 83625 ns/ops
-     * Java's Dilithium sign:     764147 ns/ops
-     * Java's Dilithium verify:   252157 ns/ops
+     * Telami's Dilithium sign:   394883 ns/ops
+     * Telami's Dilithium verify: 81079 ns/ops
+     * Java's Dilithium sign:     782878 ns/ops
+     * Java's Dilithium verify:   243729 ns/ops
      */
 
     public static void main (final String[] ignored) throws Throwable {
         Security.addProvider(new DilithiumProvider());
 
         //Utils
-        final int WARMUP_ITERATIONS = 30_000;
+        final int WARMUP_ITERATIONS = 31_000;
         final int TEST_CASES = 1_000 + WARMUP_ITERATIONS;
         //Don't specify '4627' or it will initialize all the internal arrays!
         byte[][] signs = new byte[TEST_CASES][];

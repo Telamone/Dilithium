@@ -93,18 +93,25 @@ final class PackingUtils {
 						 final PolyVec h) {
 		final int polyZPackedBytes;
         System.arraycopy(c, 0, sig, 0, tilde);
-		int off = tilde - (polyZPackedBytes = getPolyZPackedBytes(gamma1)), l = z.poly.length;
-		for (int i = 0; i < l; i++)
+		int off = tilde - (polyZPackedBytes = getPolyZPackedBytes(gamma1)),
+				l = z.poly.length,
+				i = -1,
+				j,
+				k = 0;
+		while (++i < l)
 			z.poly[i].zPack(gamma1, sig, off += polyZPackedBytes);
 		off += polyZPackedBytes;
 		/* Encode h */
 		l = omega + h.poly.length;
-		for (int i = 0; i < l; i++)
+		i = -1;
+		while (++i < l)
 			sig[off + i] = 0;
 		l -= omega;
-		for (int i = 0, k = 0; i < l; i++) {
-			for (int j = 0; j < 256; j++)
-				if (h.poly[i].cof[j] != 0)
+		i = -1;
+		while (++i < l) {
+			j = -1;
+			while (j < 255)
+				if (h.poly[i].cof[++j] != 0)
 					sig[off + k++] = (byte) j;
 			sig[off + omega + i] = (byte) k;
 		}
