@@ -36,7 +36,7 @@ final class DilithiumBenchmark {
                     .mapToObj(i -> {
                         final ThreadLocalRandom random = ThreadLocalRandom.current();
                         final byte[] a = new byte[i &= 0x7f8];
-                        while ((i -= 8) > 0)
+                        while ((i -= 8) >= 0)
                             arrayView.set(a, i, random.nextLong());
                         return a;
                     })
