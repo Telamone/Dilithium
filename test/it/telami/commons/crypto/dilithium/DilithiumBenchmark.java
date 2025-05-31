@@ -10,11 +10,11 @@ import java.util.stream.IntStream;
 
 final class DilithiumBenchmark {
 
-    /* Last Benchmark Output:
-     * Telami's Dilithium sign:   394883 ns/ops
-     * Telami's Dilithium verify: 81079 ns/ops
-     * Java's Dilithium sign:     782878 ns/ops
-     * Java's Dilithium verify:   243729 ns/ops
+    /* Last Benchmark Result:
+     * Telami's Dilithium sign:   397051 ns/ops
+     * Telami's Dilithium verify: 79012 ns/ops
+     * Java's Dilithium sign:     812519 ns/ops
+     * Java's Dilithium verify:   257439 ns/ops
      */
 
     public static void main (final String[] ignored) throws Throwable {

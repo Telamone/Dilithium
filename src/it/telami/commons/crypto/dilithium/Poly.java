@@ -61,15 +61,15 @@ final class Poly {
 	static Poly genRandom (final byte[] rho,
 						   final int nonce,
 						   final int eta) {
-		final Digest s = new Digest(256);
-		s.update(rho, rho.length);
-		byte[] bb = new byte[2];
-		bb[0] = (byte) (nonce & 0xff);
-		bb[1] = (byte) ((nonce >> 8) & 0xff);
-		s.update(bb, 2);
-		int ctr = eta * 68;
-		bb = new byte[ctr];
-		s.doOutput(bb, 0, ctr);
+		final Digest s;
+		(s = new Digest(256)).update(rho, rho.length);
+		s.update(new byte[] {
+				(byte) (nonce & 0xff),
+				(byte) ((nonce >> 8) & 0xff)
+		}, 2);
+		int ctr;
+		final byte[] bb;
+		s.doOutput(bb = new byte[ctr = eta * 68], 0, ctr);
 		final Poly pre = new Poly();
 		ctr = rej_eta(eta, pre.cof, 0, 256, bb, ctr);
 		while (ctr < 256) {
@@ -86,38 +86,22 @@ final class Poly {
 								final byte[] buf,
 								final int bufLen) {
 		int ctr = 0, pos = 0, t0, t1;
-		if (eta == 2) {
-			while (ctr < len && pos < bufLen) {
-				t0 = buf[pos] & 15;
-				t1 = (buf[pos++] >> 4) & 15;
-				if (t0 < 15)
-					cof[off + ctr++] = 2 - t0 + (205 * t0 >>> 10) * 5; //2 - t0 % 5
-				if (t1 < 15 && ctr < len)
-					cof[off + ctr++] = 2 - t1 + (205 * t1 >>> 10) * 5; //2 - t1 % 5
-			}
-		} else {
-			while (ctr < len && pos < bufLen) {
-				t0 = buf[pos] & 15;
-				t1 = (buf[pos++] >> 4) & 15;
-				if (t0 < 9)
-					cof[off + ctr++] = 4 - t0;
-				if (t1 < 9 && ctr < len)
-					cof[off + ctr++] = 4 - t1;
-			}
+		if (eta != 2) while (ctr < len && pos < bufLen) {
+			t0 = buf[pos] & 15;
+			t1 = (buf[pos++] >> 4) & 15;
+			if (t0 < 9)
+				cof[off + ctr++] = 4 - t0;
+			if (t1 < 9 && ctr < len)
+				cof[off + ctr++] = 4 - t1;
+		} else while (ctr < len && pos < bufLen) {
+			t0 = buf[pos] & 15;
+			t1 = (buf[pos++] >> 4) & 15;
+			if (t0 < 15)
+				cof[off + ctr++] = 2 - t0 + (205 * t0 >>> 10) * 5;
+			if (t1 < 15 && ctr < len)
+				cof[off + ctr++] = 2 - t1 + (205 * t1 >>> 10) * 5;
 		}
 		return ctr;
-		/* * NON-ETA-BRANCHED
-		int ctr = 0, pos = 0, t0, t1;
-		final int cmp = 21 - eta - eta - eta,
-				  rem = eta << 1 | 1;
-		while (ctr < len && pos < bufLen) {
-			if ((t0 = buf[pos] & 0xf) < cmp)
-				cof[off + ctr++] = eta - t0 % rem;
-			if ((t1 = (buf[pos++] >> 4) & 0xf) < cmp && ctr < len)
-				cof[off + ctr++] = eta - t1 % rem;
-		}
-		return ctr;
-		* */
 	}
 
 	Poly ntt () {
@@ -127,11 +111,13 @@ final class Poly {
 		for (len = 128; len > 0; len >>= 1)
 			for (start = 0; start < 256; start = j + len) {
 				zeta = zetas[++k];
-				for (j = start; j < start + len; ++j) {
-					t = reduce(zeta * cof[j + len]);
-					cof[j + len] = cof[j] - t;
-					cof[j      ] = cof[j] + t;
-				}
+				for (j = (start += len) - len; j < start; ++j)
+					cof[j + len]
+							= (cof[j]
+							+= t
+							= reduce(zeta * cof[j + len]))
+							- t
+							- t;
 			}
 		return this;
 	}
@@ -143,11 +129,13 @@ final class Poly {
 		for (len = 128; len > 0; len >>= 1)
 			for (start = 0; start < 256; start = j + len) {
 				zeta = zetas[++k];
-				for (j = start; j < start + len; ++j) {
-					t = reduce(zeta * c.cof[j + len]);
-					c.cof[j + len] = c.cof[j] - t;
-					c.cof[j      ] = c.cof[j] + t;
-				}
+				for (j = (start += len) - len; j < start; ++j)
+					c.cof[j + len]
+							= (c.cof[j]
+							+= t
+							= reduce(zeta * c.cof[j + len]))
+							- t
+							- t;
 			}
 		return c;
 	}
@@ -155,26 +143,24 @@ final class Poly {
 	private static int reduce (final long a) {
 		return (int) ((a + (int) (a * 0x3802001L) * 0xffffffffff801fffL) >> 32);
 	}
-
 	static Poly genUniformRandom (final byte[] rho, final int nonce) {
 		int ctr, off, bufLen = 840;
-		final Digest s = new Digest(128);
-		s.update(rho, rho.length);
-		byte[] buf = new byte[2];
-		buf[0] = (byte) (nonce & 0xff);
-		buf[1] = (byte) (nonce >> 8 & 0xff);
-		s.update(buf, 2);
-		buf = new byte[842];
-		s.doOutput(buf, 0, 840);
-		final Poly pre = new Poly();
-		ctr = rej_uniform(pre.cof, 0, 256, buf, 840);
+		final Digest s;
+		(s = new Digest(128)).update(rho, rho.length);
+		s.update(new byte[] {
+				(byte) (nonce & 0xff),
+				(byte) ((nonce >> 8) & 0xff)
+		}, 2);
+		final byte[] buf;
+		s.doOutput(buf = new byte[840], 0, 840);
+		final Poly pre;
+		ctr = rej_uniform((pre = new Poly()).cof, 0, 256, buf, 840);
 		while (ctr < 256) {
 			off = bufLen % 3;
 			for (int i = 0; i < off; i++)
 				buf[i] = buf[bufLen - off + i];
 			s.doOutput(buf, off, 168);
-			bufLen = 168 + off;
-			ctr += rej_uniform(pre.cof, ctr, 256 - ctr, buf, bufLen);
+			ctr += rej_uniform(pre.cof, ctr, 256 - ctr, buf, bufLen = 168 + off);
 		}
 		return pre;
 	}
@@ -185,13 +171,12 @@ final class Poly {
 									final byte[] buf,
 									final int bufLen) {
 		int ctr = 0, pos = 0, t;
-		while (ctr < len && pos + 2 < bufLen) {
-			t =      buf[pos     ] & 0xff        |
-					(buf[pos +  1] & 0xff) << 8  |
-					(buf[pos += 2] & 0x7f) << 16 ;
-			if (t < 0x7fe001)
+		while (ctr < len && pos + 2 < bufLen)
+			if ((t = buf[pos     ] & 0xff       |
+					(buf[pos +  1] & 0xff) << 8 |
+					(buf[pos += 2] & 0x7f) << 16)
+					< 0x7fe001)
 				cof[off + ctr++] = t;
-		}
 		return ctr;
 	}
 
@@ -215,11 +200,9 @@ final class Poly {
 		for (len = 1; len < 256; len <<= 1)
 			for (start = 0; start < 256; start = j + len) {
 				zeta = -zetas[--k];
-				for (j = start; j < start + len; ++j) {
-					t = cof[j];
-					cof[j] = t + cof[j + len];
-					cof[j + len] = t - cof[j + len];
-					cof[j + len] = reduce(zeta * cof[j + len]);
+				for (j = (start += len) - len; j < start; ++j) {
+					cof[j] = (t = cof[j]) + cof[j + len];
+					cof[j + len] = reduce(zeta * (t - cof[j + len]));
 				}
 			}
 		j = -1;
@@ -248,74 +231,53 @@ final class Poly {
 	}
 
 	void t1Pack (final byte[] r, final int off) {
-		for (int i = 0; i < 64; i++) {
-			r[5 * i     + off] = (byte) ((cof[4 * i    ]      )                        );
-			r[5 * i + 1 + off] = (byte) ((cof[4 * i    ] >>> 8) | (cof[4 * i + 1] << 2));
-			r[5 * i + 2 + off] = (byte) ((cof[4 * i + 1] >>> 6) | (cof[4 * i + 2] << 4));
-			r[5 * i + 3 + off] = (byte) ((cof[4 * i + 2] >>> 4) | (cof[4 * i + 3] << 6));
-			r[5 * i + 4 + off] = (byte) ((cof[4 * i + 3] >>> 2)                        );
+		int i = -1;
+		while (i < 63) {
+			r[off + 5 * ++i    ] = (byte) ((cof[(i << 2)    ]      )                           );
+			r[off + 5 *   i + 1] = (byte) ((cof[(i << 2)    ] >>> 8) | (cof[(i << 2) + 1] << 2));
+			r[off + 5 *   i + 2] = (byte) ((cof[(i << 2) + 1] >>> 6) | (cof[(i << 2) + 2] << 4));
+			r[off + 5 *   i + 3] = (byte) ((cof[(i << 2) + 2] >>> 4) | (cof[(i << 2) + 3] << 6));
+			r[off + 5 *   i + 4] = (byte) ((cof[(i << 2) + 3] >>> 2)                           );
 		}
 	}
 
 	void etaPack (final byte[] buf,
 				  final int off,
 				  final int eta) {
-		if (eta == 2) {
+		int i = -1;
+		if (eta != 2) {
+			while (i < 127)
+				buf[off + ++i] = (byte) (eta - cof[i << 1] | eta - cof[(i << 1) + 1] << 4);
+		} else {
 			final byte[] t = new byte[8];
-			for (int i = 0; i < 32; i++) {
-				t[0] = (byte) (eta - cof[8 * i    ]);
-				t[1] = (byte) (eta - cof[8 * i + 1]);
-				t[2] = (byte) (eta - cof[8 * i + 2]);
-				t[3] = (byte) (eta - cof[8 * i + 3]);
-				t[4] = (byte) (eta - cof[8 * i + 4]);
-				t[5] = (byte) (eta - cof[8 * i + 5]);
-				t[6] = (byte) (eta - cof[8 * i + 6]);
-				t[7] = (byte) (eta - cof[8 * i + 7]);
+			while (i < 31) {
+				t[0] = (byte) (eta - cof[(++i << 3)    ]);
+				t[1] = (byte) (eta - cof[(  i << 3) + 1]);
+				t[2] = (byte) (eta - cof[(  i << 3) + 2]);
+				t[3] = (byte) (eta - cof[(  i << 3) + 3]);
+				t[4] = (byte) (eta - cof[(  i << 3) + 4]);
+				t[5] = (byte) (eta - cof[(  i << 3) + 5]);
+				t[6] = (byte) (eta - cof[(  i << 3) + 6]);
+				t[7] = (byte) (eta - cof[(  i << 3) + 7]);
 				buf[off + 3 * i    ] = (byte) ((t[0]     ) | (t[1] << 3) | (t[2] << 6)              );
 				buf[off + 3 * i + 1] = (byte) ((t[2] >> 2) | (t[3] << 1) | (t[4] << 4) | (t[5] << 7));
 				buf[off + 3 * i + 2] = (byte) ((t[5] >> 1) | (t[6] << 2) | (t[7] << 5)              );
 			}
-		} else {
-			final byte[] t = new byte[2];
-			for (int i = 0; i < 128; i++) {
-				t[0] = (byte) (eta - cof[2 * i    ]);
-				t[1] = (byte) (eta - cof[2 * i + 1]);
-				buf[off + i] = (byte) (t[0] | (t[1] << 4));
-			}
 		}
-		/* * NON-ETA-BRANCHED
-		final int
-				u = 5 - eta,
-				n = 1 << u,
-				m = 256 >> u,
-				a = eta + (eta >> 1 & 1),
-				e = 8 - a;
-		final byte[] t = new byte[n];
-		for (int i = 0; i < m; i++) {
-			for (int j = 0; j < n; j++)
-				t[j] = (byte) (eta - cof[(i << u) + j]);
-			for (int j = 0, b = 0, c = 8; j < u; j++) {
-				final int d = off + u * i + j;
-				buf[d] = (byte) (t[b] >> (b & 3));
-				c -= 8;
-				while (c < e)
-					buf[d] |= (byte) (t[++b] << (c += a));
-			}
-		}
-		* */
 	}
 
 	void t0Pack (final byte[] buf, final int off) {
+		int i = -1;
 		final int[] t = new int[8];
-		for (int i = 0; i < 32; i++) {
-			t[0] = 4096 - this.cof[8 * i    ];
-			t[1] = 4096 - this.cof[8 * i + 1];
-			t[2] = 4096 - this.cof[8 * i + 2];
-			t[3] = 4096 - this.cof[8 * i + 3];
-			t[4] = 4096 - this.cof[8 * i + 4];
-			t[5] = 4096 - this.cof[8 * i + 5];
-			t[6] = 4096 - this.cof[8 * i + 6];
-			t[7] = 4096 - this.cof[8 * i + 7];
+		while (i < 31) {
+			t[0] = 4096 - this.cof[(++i << 3)    ];
+			t[1] = 4096 - this.cof[(  i << 3) + 1];
+			t[2] = 4096 - this.cof[(  i << 3) + 2];
+			t[3] = 4096 - this.cof[(  i << 3) + 3];
+			t[4] = 4096 - this.cof[(  i << 3) + 4];
+			t[5] = 4096 - this.cof[(  i << 3) + 5];
+			t[6] = 4096 - this.cof[(  i << 3) + 6];
+			t[7] = 4096 - this.cof[(  i << 3) + 7];
 			buf[off + 13 * i    ] = (byte) t[0];
 			buf[off + 13 * i + 1] = (byte) (t[0] >> 8);
 			buf[off + 13 * i + 1] |= (byte) (t[1] << 5);
@@ -342,44 +304,45 @@ final class Poly {
 	static Poly genRandomGamma1 (final byte[] seed,
 								 final int nonce,
 								 final int gamma1) {
-		final Digest s = new Digest(256);
-		s.update(seed, seed.length);
-		byte[] buf = new byte[2];
-		buf[0] = (byte) (nonce & 0xff);
-		buf[1] = (byte) (nonce >> 8 & 0xff);
-		s.update(buf, 2);
-		buf = new byte[680];
-		s.doOutput(buf, 0, 680);
+		final Digest s;
+		(s = new Digest(256)).update(seed, seed.length);
+		s.update(new byte[] {
+				(byte) (nonce & 0xff),
+				(byte) ((nonce >> 8) & 0xff)
+		}, 2);
+		final byte[] buf;
+		s.doOutput(buf = new byte[680], 0, 680);
 		final Poly pre = new Poly();
-		if (gamma1 == 131072) for (int i = 0; i < 64; i++) {
-			pre.cof[4 * i    ] =   buf[9 * i    ] & 0xff;
-			pre.cof[4 * i    ] |= (buf[9 * i + 1] & 0xff) << 8;
-			pre.cof[4 * i    ] |= (buf[9 * i + 2] & 0xff) << 16;
-			pre.cof[4 * i    ] &= 0x3ffff;
-			pre.cof[4 * i + 1] =  (buf[9 * i + 2] & 0xff) >> 2;
-			pre.cof[4 * i + 1] |= (buf[9 * i + 3] & 0xff) << 6;
-			pre.cof[4 * i + 1] |= (buf[9 * i + 4] & 0xff) << 14;
-			pre.cof[4 * i + 1] &= 0x3ffff;
-			pre.cof[4 * i + 2] =  (buf[9 * i + 4] & 0xff) >> 4;
-			pre.cof[4 * i + 2] |= (buf[9 * i + 5] & 0xff) << 4;
-			pre.cof[4 * i + 2] |= (buf[9 * i + 6] & 0xff) << 12;
-			pre.cof[4 * i + 2] &= 0x3ffff;
-			pre.cof[4 * i + 3] =  (buf[9 * i + 6] & 0xff) >> 6;
-			pre.cof[4 * i + 3] |= (buf[9 * i + 7] & 0xff) << 2;
-			pre.cof[4 * i + 3] |= (buf[9 * i + 8] & 0xff) << 10;
-			pre.cof[4 * i    ] = gamma1 - pre.cof[4 * i    ];
-			pre.cof[4 * i + 1] = gamma1 - pre.cof[4 * i + 1];
-			pre.cof[4 * i + 2] = gamma1 - pre.cof[4 * i + 2];
-			pre.cof[4 * i + 3] = gamma1 - pre.cof[4 * i + 3];
-		} else for (int i = 0; i < 128; i++) {
-			pre.cof[2 * i    ] =   buf[5 * i    ] & 0xff;
-			pre.cof[2 * i    ] |= (buf[5 * i + 1] & 0xff) << 8;
-			pre.cof[2 * i    ] |= (buf[5 * i + 2] & 0xf) << 16;
-			pre.cof[2 * i + 1] =  (buf[5 * i + 2] & 0xff) >> 4;
-			pre.cof[2 * i + 1] |= (buf[5 * i + 3] & 0xff) << 4;
-			pre.cof[2 * i + 1] |= (buf[5 * i + 4] & 0xff) << 12;
-			pre.cof[2 * i    ] = gamma1 - pre.cof[2 * i    ];
-			pre.cof[2 * i + 1] = gamma1 - pre.cof[2 * i + 1];
+		int i = -1;
+		if (gamma1 != 131072) while (i < 127) {
+			pre.cof[(++i << 1)    ] =   buf[5 * i    ] & 0xff;
+			pre.cof[(  i << 1)    ] |= (buf[5 * i + 1] & 0xff) << 8;
+			pre.cof[(  i << 1)    ] |= (buf[5 * i + 2] & 0xf) << 16;
+			pre.cof[(  i << 1) + 1] =  (buf[5 * i + 2] & 0xff) >> 4;
+			pre.cof[(  i << 1) + 1] |= (buf[5 * i + 3] & 0xff) << 4;
+			pre.cof[(  i << 1) + 1] |= (buf[5 * i + 4] & 0xff) << 12;
+			pre.cof[(  i << 1)    ] = gamma1 - pre.cof[(i << 1)    ];
+			pre.cof[(  i << 1) + 1] = gamma1 - pre.cof[(i << 1) + 1];
+		} else while (i < 63) {
+			pre.cof[(++i << 2)    ] =   buf[9 * i    ] & 0xff;
+			pre.cof[(  i << 2)    ] |= (buf[9 * i + 1] & 0xff) << 8;
+			pre.cof[(  i << 2)    ] |= (buf[9 * i + 2] & 0xff) << 16;
+			pre.cof[(  i << 2)    ] &= 0x3ffff;
+			pre.cof[(  i << 2) + 1] =  (buf[9 * i + 2] & 0xff) >> 2;
+			pre.cof[(  i << 2) + 1] |= (buf[9 * i + 3] & 0xff) << 6;
+			pre.cof[(  i << 2) + 1] |= (buf[9 * i + 4] & 0xff) << 14;
+			pre.cof[(  i << 2) + 1] &= 0x3ffff;
+			pre.cof[(  i << 2) + 2] =  (buf[9 * i + 4] & 0xff) >> 4;
+			pre.cof[(  i << 2) + 2] |= (buf[9 * i + 5] & 0xff) << 4;
+			pre.cof[(  i << 2) + 2] |= (buf[9 * i + 6] & 0xff) << 12;
+			pre.cof[(  i << 2) + 2] &= 0x3ffff;
+			pre.cof[(  i << 2) + 3] =  (buf[9 * i + 6] & 0xff) >> 6;
+			pre.cof[(  i << 2) + 3] |= (buf[9 * i + 7] & 0xff) << 2;
+			pre.cof[(  i << 2) + 3] |= (buf[9 * i + 8] & 0xff) << 10;
+			pre.cof[(  i << 2)    ] = gamma1 - pre.cof[(i << 2)    ];
+			pre.cof[(  i << 2) + 1] = gamma1 - pre.cof[(i << 2) + 1];
+			pre.cof[(  i << 2) + 2] = gamma1 - pre.cof[(i << 2) + 2];
+			pre.cof[(  i << 2) + 3] = gamma1 - pre.cof[(i << 2) + 3];
 		}
 		return pre;
 	}
@@ -390,15 +353,14 @@ final class Poly {
 		while (i < 255) {
 			final int a = cof[++i];
 			int a1 = a + 127 >> 7;
-			if (gamma2 == 261888)
-				a1 = a1 * 1025 + 2097152 >> 22 & 15;
-			else {
+			if (gamma2 != 261888) {
 				a1 = a1 * 11275 + 8388608 >> 24;
 				a1 ^= 43 - a1 >> 31 & a1;
+			} else {
+				a1 = a1 * 1025 + 2097152 >> 22 & 15;
 			}
-			cof[i] = a - a1 * 2 * gamma2;
+			cof[i] = a - ((o.cof[i] = a1) * gamma2 << 1);
 			cof[i] -= 4190208 - cof[i] >> 31 & 0x7fe001;
-			o.cof[i] = a1;
 		}
 		return o;
 	}
@@ -406,15 +368,20 @@ final class Poly {
 	void w1pack (final int gamma2,
 				 final byte[] buf,
 				 final int off) {
-		if (gamma2 == 95232) for (int i = 0; i < 64; i++) {
-			buf[off + 3 * i    ]  = (byte)  this.cof[4 * i    ]      ;
-			buf[off + 3 * i    ] |= (byte) (this.cof[4 * i + 1] << 6);
-			buf[off + 3 * i + 1]  = (byte) (this.cof[4 * i + 1] >> 2);
-			buf[off + 3 * i + 1] |= (byte) (this.cof[4 * i + 2] << 4);
-			buf[off + 3 * i + 2]  = (byte) (this.cof[4 * i + 2] >> 4);
-			buf[off + 3 * i + 2] |= (byte) (this.cof[4 * i + 3] << 2);
-		} else for (int i = 0; i < 128; i++)
-			buf[off + i] = (byte) (this.cof[2 * i] | (this.cof[2 * i + 1] << 4));
+		int i = -1;
+		if (gamma2 != 95232) {
+			while (i < 127)
+				buf[off + ++i] = (byte) (this.cof[i << 1] | (this.cof[(i << 1) + 1] << 4));
+		} else {
+			while (i < 63) {
+				buf[off + 3 * ++i    ]  = (byte)  this.cof[(i << 2)    ]      ;
+				buf[off + 3 *   i    ] |= (byte) (this.cof[(i << 2) + 1] << 6);
+				buf[off + 3 *   i + 1]  = (byte) (this.cof[(i << 2) + 1] >> 2);
+				buf[off + 3 *   i + 1] |= (byte) (this.cof[(i << 2) + 2] << 4);
+				buf[off + 3 *   i + 2]  = (byte) (this.cof[(i << 2) + 2] >> 4);
+				buf[off + 3 *   i + 2] |= (byte) (this.cof[(i << 2) + 3] << 2);
+			}
+		}
 	}
 
 	boolean chkNorm (final int b) {
@@ -427,7 +394,7 @@ final class Poly {
 		 */
 		int i = -1;
 		while (i < 255)
-			if (cof[++i] - (cof[i] >> 31 & 2 * cof[i]) >= b)
+			if (cof[++i] - (cof[i] >> 31 & cof[i] << 1) >= b)
 				return true;
 		return false;
 	}
@@ -435,13 +402,25 @@ final class Poly {
 	void zPack (final int gamma1,
 				final byte[] sign,
 				final int off) {
-		if (gamma1 == 131072) {
+		if (gamma1 != 131072) {
+			int a, b;
+			for (int i = 0; i < 128; i++) {
+				a = gamma1 - cof[(i << 1)    ];
+				b = gamma1 - cof[(i << 1) + 1];
+				sign[off + 5 * i    ]  = (byte)  a       ;
+				sign[off + 5 * i + 1]  = (byte) (a >> 8 );
+				sign[off + 5 * i + 2]  = (byte) (a >> 16);
+				sign[off + 5 * i + 2] |= (byte) (b << 4 );
+				sign[off + 5 * i + 3]  = (byte) (b >> 4 );
+				sign[off + 5 * i + 4]  = (byte) (b >> 12);
+			}
+		} else {
 			int a, b, c, d;
 			for (int i = 0; i < 64; i++) {
-				a = gamma1 - cof[4 * i    ];
-				b = gamma1 - cof[4 * i + 1];
-				c = gamma1 - cof[4 * i + 2];
-				d = gamma1 - cof[4 * i + 3];
+				a = gamma1 - cof[(i << 2)    ];
+				b = gamma1 - cof[(i << 2) + 1];
+				c = gamma1 - cof[(i << 2) + 2];
+				d = gamma1 - cof[(i << 2) + 3];
 				sign[off + 9 * i    ]  = (byte)  a       ;
 				sign[off + 9 * i + 1]  = (byte) (a >> 8 );
 				sign[off + 9 * i + 2]  = (byte) (a >> 16);
@@ -454,18 +433,6 @@ final class Poly {
 				sign[off + 9 * i + 6] |= (byte) (d << 6 );
 				sign[off + 9 * i + 7]  = (byte) (d >> 2 );
 				sign[off + 9 * i + 8]  = (byte) (d >> 10);
-			}
-		} else {
-			int a, b;
-			for (int i = 0; i < 128; i++) {
-				a = gamma1 - cof[2 * i    ];
-				b = gamma1 - cof[2 * i + 1];
-				sign[off + 5 * i    ]  = (byte)  a       ;
-				sign[off + 5 * i + 1]  = (byte) (a >> 8 );
-				sign[off + 5 * i + 2]  = (byte) (a >> 16);
-				sign[off + 5 * i + 2] |= (byte) (b << 4 );
-				sign[off + 5 * i + 3]  = (byte) (b >> 4 );
-				sign[off + 5 * i + 4]  = (byte) (b >> 12);
 			}
 		}
 	}

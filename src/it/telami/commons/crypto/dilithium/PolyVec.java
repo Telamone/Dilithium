@@ -3,7 +3,7 @@ package it.telami.commons.crypto.dilithium;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
-public final class PolyVec {
+final class PolyVec {
 	final Poly[] poly;
 	
 	PolyVec (final int sz) {

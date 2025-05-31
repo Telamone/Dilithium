@@ -26,12 +26,14 @@ final class Dilithium {
 				new DilithiumPrivateKeyImpl(spec, rho, k, pr = Utils.crh(pu), s1, s2, res, PackingUtils.packPrvKey(spec.eta, tilde, rho, k, pr, s1, s2, res), a, s1hat, s2.ntt(), res.ntt()));
 	}
 	
-	static byte[] sign (final DilithiumPrivateKeyImpl prv, final byte[] m) {
+	static byte[] sign (final DilithiumPrivateKeyImpl prv,
+						final byte[] m,
+						final int len) {
 		final DilithiumParameterSpec spec;
 		final byte[] sig
 				= new byte[Utils.getSigLength(spec = prv.getSpec())], mu, rhoPrime
-				= Utils.mu_crh(Utils.concatOrCopy(prv.k, mu
-				= Utils.mu_crh(Utils.concatOrCopy(prv.tr, m))));
+				= Utils.getSHAKE256Digest(64, prv.k, mu
+				= Utils.getSHAKE256Digest(64, prv.tr, m, len), 64);
 		final PolyVec[] a = prv.a;
 		final int
 				mul = mu.length,
@@ -63,8 +65,7 @@ final class Dilithium {
 							.c_ADD_q())
 							.decompose(g2),
 					sig);
-			s = new Digest(256);
-			s.update(mu, mul);
+			(s = new Digest(256)).update(mu, mul);
 			s.update(sig, res
 					.poly
 					.length
@@ -100,7 +101,8 @@ final class Dilithium {
 	
 	static boolean verify (final DilithiumPublicKeyImpl pk,
 						   final byte[] sig,
-						   final byte[] m) {
+						   final byte[] m,
+						   final int len) {
 		final DilithiumParameterSpec spec;
 		if (Utils.getSigLength(spec = pk.getSpec()) != sig.length)
 			throw new DilithiumSignatureVerificationException("Invalid signature length");
@@ -159,10 +161,10 @@ final class Dilithium {
 				.reduce()
 				.invNTTtoMont()
 				.c_ADD_q(), h);
-		mu = Utils.getSHAKE256Digest(64, Utils.crh(pk.getEncoded()), m);
+		mu = Utils.getSHAKE256Digest(64, Utils.crh(pk.getEncoded()), m, len);
 		buf = new byte[PackingUtils.getPolyW1PackedBytes(g2) * z.poly.length];
 		PackingUtils.packW1(g2, z, buf);
-		c2 = Utils.getSHAKE256Digest(tilde, mu, buf);
+		c2 = Utils.getSHAKE256Digest(tilde, mu, buf, buf.length);
 		for (int i = 0; i < tilde; i++)
 			if (cappedSign[i] != c2[i])
 				return false;
@@ -203,27 +205,27 @@ final class Dilithium {
 								int a,
 								final int hint) {
 		int a1;
-		if (gamma2 == 261888)
-			a1 = (a + 127 >> 7) * 1025 + 2097152 >> 22 & 15;
-		else {
-			a1 = (a + 127 >> 7) * 11275 + 8388608 >> 24;
-			a1 ^= 43 - a1 >> 31 & a1;
-		}
-		if (hint == 0)
+        if (gamma2 != 261888) {
+            a1 = (a + 127 >> 7) * 11275 + 8388608 >> 24;
+            a1 ^= 43 - a1 >> 31 & a1;
+        } else {
+            a1 = (a + 127 >> 7) * 1025 + 2097152 >> 22 & 15;
+        }
+        if (hint == 0)
 			return a1;
 		a -= a1 * gamma2 << 1;
 		a -= 0x3ff000 - a >> 31 & 0x7fe001;
-		return gamma2 == 261888
+		return gamma2 != 261888
 				? a > 0
-				? a1 + 1 & 15
-				: a1 - 1 & 15
+                ? a1 != 43
+				? a1 + 1
+				: 0
+                : a1 != 0
+				? a1 - 1
+				: 43
 				: a > 0
-				? a1 == 43
-				? 0
-				: a1 + 1
-				: a1 == 0
-				? 43
-				: a1 - 1;
+                ? a1 + 1 & 15
+                : a1 - 1 & 15;
 	}
 
 	private static class Hints {
@@ -263,10 +265,12 @@ final class Dilithium {
 	private static int makeHint (final int gamma2,
 								 final int a0,
 								 final int a1) {
-		return a0 <= gamma2
-				|| a0 > 0x7fe001 - gamma2
-				|| (a0 == 0x7fe001 - gamma2
-				&& a1 == 0) ? 0 : 1;
+		return a0 > gamma2
+                && a0 <= 0x7fe001 - gamma2
+                && (a0 != 0x7fe001 - gamma2
+                || a1 != 0)
+				? 1
+				: 0;
 	}
 
 	private static Poly generateChallenge (final int tilde,
@@ -275,10 +279,10 @@ final class Dilithium {
 		final Poly pre = new Poly();
 		int b, pos;
 		long signs;
-		final byte[] buf = new byte[136];
-		final Digest s = new Digest(256);
-		s.update(seed, tilde);
-		s.doOutput(buf, 0, 136);
+		final byte[] buf;
+		final Digest s;
+		(s = new Digest(256)).update(seed, tilde);
+		s.doOutput(buf = new byte[136], 0, 136);
 		signs = 0L;
 		for (int i = 0; i < 8; i++)
 			signs |= (long) (buf[i] & 0xff) << 8 * i;

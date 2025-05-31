@@ -5,7 +5,7 @@ import java.security.Provider;
 @SuppressWarnings("unused")
 public final class DilithiumProvider extends Provider {
 	public DilithiumProvider () {
-		super("Dilithium", "1.0.1", "Modified by Telami (this: https://github.com/Telamone/Dilithium) (original: https://github.com/mthiim/dilithium-java)");
+		super("Dilithium", "1.0.2", "Modified by Telami (this: https://github.com/Telamone/Dilithium) (original: https://github.com/mthiim/dilithium-java)");
 		put("KeyPairGenerator.Dilithium", "it.telami.commons.crypto.dilithium.DilithiumKeyPairGenerator");
 		put("Alg.Alias.KeyPairGenerator.Dilithium", "Dilithium");
 		put("KeyFactory.Dilithium", "it.telami.commons.crypto.dilithium.DilithiumKeyFactory");

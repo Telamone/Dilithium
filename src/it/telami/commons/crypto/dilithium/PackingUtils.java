@@ -101,7 +101,6 @@ final class PackingUtils {
 		while (++i < l)
 			z.poly[i].zPack(gamma1, sig, off += polyZPackedBytes);
 		off += polyZPackedBytes;
-		/* Encode h */
 		l = omega + h.poly.length;
 		i = -1;
 		while (++i < l)

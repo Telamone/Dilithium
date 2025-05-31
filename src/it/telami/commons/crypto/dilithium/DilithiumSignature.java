@@ -1,64 +1,97 @@
 package it.telami.commons.crypto.dilithium;
 
-import java.io.ByteArrayOutputStream;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SignatureSpi;
 
 @SuppressWarnings("unused")
 public final class DilithiumSignature extends SignatureSpi {
-	private static final int initialSize = Integer.getInteger("SignatureUpdateBufferSize", 1735);
+	static final int initialSize = Integer.getInteger("DilithiumSignatureUpdateBufferSize", 1735);
+	static final boolean shouldZero = Boolean.getBoolean("DilithiumSignatureShouldZero");
 
 	private DilithiumPublicKeyImpl pubKey;
 	private DilithiumPrivateKeyImpl prvKey;
-	private ByteArrayOutputStream byteAOS = new ByteArrayOutputStream(initialSize);
-	
-	@Override
+	private int i;
+	private byte[] data = new byte[initialSize];
+
 	public void engineInitVerify (final PublicKey publicKey) {
 		if (publicKey instanceof DilithiumPublicKeyImpl pk)
 			pubKey = pk;
 		else throw new IllegalArgumentException("Not a valid public key");
 	}
 
-	@Override
 	public void engineInitSign (final PrivateKey privateKey) {
 		if (privateKey instanceof DilithiumPrivateKeyImpl pk)
 			prvKey = pk;
 		else throw new IllegalArgumentException("Not a valid private key");
 	}
 
-	@Override
 	public void engineUpdate (final byte b) {
-		byteAOS.write(b & 0xff);
+		if (i < data.length)
+			data[i++] = b;
+		else {
+			final byte[] data;
+			System.arraycopy(
+					this.data,
+					0,
+					data = new byte[i << 1],
+					0,
+					i);
+			(this.data = data)[i++] = b;
+		}
 	}
-
-	@Override
 	public void engineUpdate (final byte[] b,
 							  final int off,
 							  final int len) {
-		byteAOS.write(b, off, len);
+		if (data.length < i + len) {
+			final byte[] data;
+			System.arraycopy(
+					this.data,
+					0,
+					data = new byte[i + len],
+					0,
+					i);
+			System.arraycopy(
+					b,
+					0,
+					data,
+					i,
+					len);
+			i += len;
+			this.data = data;
+		} else {
+			System.arraycopy(
+					b,
+					off,
+					data,
+					i,
+					len);
+			i += len;
+		}
 	}
 
-	@Override
 	public byte[] engineSign () {
-		if (prvKey == null)
-			throw new IllegalStateException("Not in signing mode");
-		try {
-			return Dilithium.sign(prvKey, byteAOS.toByteArray());
+		if (prvKey != null) try {
+			return Dilithium.sign(prvKey, data, i);
 		} finally {
-			byteAOS = new ByteArrayOutputStream(initialSize);
+			if (shouldZero)
+				while (i != 0)
+					data[--i] = (byte) 0;
+			else i = 0;
 		}
+		else throw new IllegalStateException("Not in signing mode");
 	}
 
-	@Override
 	public boolean engineVerify (final byte[] sigBytes) {
-		if (pubKey == null)
-			throw new IllegalStateException("Not in verify mode");
-		try {
-			return Dilithium.verify(pubKey, sigBytes, byteAOS.toByteArray());
+		if (pubKey != null) try {
+			return Dilithium.verify(pubKey, sigBytes, data, i);
 		} finally {
-			byteAOS = new ByteArrayOutputStream(initialSize);
+			if (shouldZero)
+				while (i != 0)
+					data[--i] = (byte) 0;
+			else i = 0;
 		}
+		else throw new IllegalStateException("Not in verify mode");
 	}
 
 	public void engineSetParameter (final String param, final Object value) {
