@@ -402,11 +402,11 @@ final class Poly {
 	void zPack (final int gamma1,
 				final byte[] sign,
 				final int off) {
+		int i = -1, a, b;
 		if (gamma1 != 131072) {
-			int a, b;
-			for (int i = 0; i < 128; i++) {
-				a = gamma1 - cof[(i << 1)    ];
-				b = gamma1 - cof[(i << 1) + 1];
+			while (i < 127) {
+				a = gamma1 - cof[(++i << 1)    ];
+				b = gamma1 - cof[(  i << 1) + 1];
 				sign[off + 5 * i    ]  = (byte)  a       ;
 				sign[off + 5 * i + 1]  = (byte) (a >> 8 );
 				sign[off + 5 * i + 2]  = (byte) (a >> 16);
@@ -415,12 +415,12 @@ final class Poly {
 				sign[off + 5 * i + 4]  = (byte) (b >> 12);
 			}
 		} else {
-			int a, b, c, d;
-			for (int i = 0; i < 64; i++) {
-				a = gamma1 - cof[(i << 2)    ];
-				b = gamma1 - cof[(i << 2) + 1];
-				c = gamma1 - cof[(i << 2) + 2];
-				d = gamma1 - cof[(i << 2) + 3];
+			int c, d;
+			while (i < 63) {
+				a = gamma1 - cof[(++i << 2)    ];
+				b = gamma1 - cof[(  i << 2) + 1];
+				c = gamma1 - cof[(  i << 2) + 2];
+				d = gamma1 - cof[(  i << 2) + 3];
 				sign[off + 9 * i    ]  = (byte)  a       ;
 				sign[off + 9 * i + 1]  = (byte) (a >> 8 );
 				sign[off + 9 * i + 2]  = (byte) (a >> 16);
