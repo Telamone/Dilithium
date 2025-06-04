@@ -61,7 +61,7 @@ final class Poly {
 	private static int modulo_7fe001 (long n) {
 		n = n - (n >>> 23) * 8380417L;
 		n -= 8380417L & ~(n - 8380417L >> 63);
-		n += 8380417L & ((int) n + 8380416 >> 31);
+		n += 8380417L & (int) n + 8380416 >> 31;
 		return (int) n;
 	}
 
