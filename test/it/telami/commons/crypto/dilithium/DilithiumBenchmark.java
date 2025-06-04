@@ -13,7 +13,7 @@ import java.util.stream.IntStream;
 
 final class DilithiumBenchmark {
 
-    /* Best Benchmark Results (i7 10700k | 4.7 Ghz | All cores):
+    /* Best Benchmark Result (i7 10700k | 4.7 Ghz | All cores):
      * Telami's ThreadSafeDilithium sign:   70696 ns/ops
      * Telami's ThreadSafeDilithium verify: 14219 ns/ops
      * Telami's Dilithium sign:             383210 ns/ops
