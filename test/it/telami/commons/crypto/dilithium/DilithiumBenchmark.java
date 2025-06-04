@@ -13,13 +13,13 @@ import java.util.stream.IntStream;
 
 final class DilithiumBenchmark {
 
-    /* Last Benchmark Result:
-     * Telami's ThreadSafeDilithium sign:   72438 ns/ops
-     * Telami's ThreadSafeDilithium verify: 14155 ns/ops
+    /* Best Benchmark Result (i7 10700k | 4.7 Ghz | All cores):
+     * Telami's ThreadSafeDilithium sign:   70696 ns/ops
+     * Telami's ThreadSafeDilithium verify: 14219 ns/ops
      * Telami's Dilithium sign:             383210 ns/ops
      * Telami's Dilithium verify:           79012 ns/ops
-     * Java's Dilithium sign:               843658 ns/ops
-     * Java's Dilithium verify:             259050 ns/ops
+     * Java's Dilithium sign:               767563 ns/ops
+     * Java's Dilithium verify:             255607 ns/ops
      */
 
     public static void main (final String[] ignored) throws Throwable {

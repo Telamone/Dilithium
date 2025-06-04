@@ -49,13 +49,20 @@ final class Poly {
 	void add (final Poly p) {
 		int i = -1;
         while (i < 255)
-			cof[++i] = cof[i] + p.cof[i] % 0x7fe001;
+			cof[++i] = cof[i] + modulo_7fe001(p.cof[i]);
 	}
 
 	void sub (final Poly p) {
 		int i = -1;
 		while (i < 255)
-			cof[++i] = cof[i] - p.cof[i] % 0x7fe001;
+			cof[++i] = cof[i] - modulo_7fe001(p.cof[i]);
+	}
+
+	private static int modulo_7fe001 (long n) {
+		n = n - (n >>> 23) * 8380417L;
+		n -= 8380417L & ~(n - 8380417L >> 63);
+		n += 8380417L & ((int) n + 8380416 >> 31);
+		return (int) n;
 	}
 
 	static Poly genRandom (final byte[] rho,
@@ -156,7 +163,12 @@ final class Poly {
 		final Poly pre;
 		ctr = rej_uniform((pre = new Poly()).cof, 0, 256, buf, 840);
 		while (ctr < 256) {
-			off = bufLen % 3;
+			//Avoid using % 3 (optimized since in range 168 -> 840)
+			off = (bufLen >> 6) + (bufLen & 0x3f);
+			off = (off >> 4) + (off & 0xf);
+			off = (off >> 2) + (off & 0x3);
+			off = (off >> 2) + (off & 0x3);
+			off = off - (off + 0x7ffffffd >> 31 & 3);
 			for (int i = 0; i < off; i++)
 				buf[i] = buf[bufLen - off + i];
 			s.doOutput(buf, off, 168);
