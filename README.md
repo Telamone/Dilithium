@@ -17,32 +17,32 @@ For more information about the algorithm, I would recommend to visit the origina
 Code:
 
 ```java
-    Security.addProvider(new DilithiumProvider());
+Security.addProvider(new DilithiumProvider());
 
-    final KeyPairGenerator kpg = KeyPairGenerator.getInstance("Dilithium");
-    kpg.initialize(DilithiumParameterSpec.LEVEL_5);
+final KeyPairGenerator kpg = KeyPairGenerator.getInstance("Dilithium");
+kpg.initialize(DilithiumParameterSpec.LEVEL_5);
 
-    final KeyPair kp = kpg.generateKeyPair();
+final KeyPair kp = kpg.generateKeyPair();
 
-    final PrivateKey prvK = kp.getPrivate();
-    final PublicKey pubK = kp.getPublic();
+final PrivateKey prvK = kp.getPrivate();
+final PublicKey pubK = kp.getPublic();
 
-    final Signature signature = Signature.getInstance("Dilithium"); //or "ThreadSafeDilithium"
+final Signature signature = Signature.getInstance("Dilithium"); //or "ThreadSafeDilithium"
 
-    final byte[] message = "Message!".getBytes();
+final byte[] message = "Message!".getBytes();
 
-    signature.initSign(prvK);
-    signature.update(message);
-    final byte[] sign = signature.sign();
+signature.initSign(prvK);
+signature.update(message);
+final byte[] sign = signature.sign();
 
-    signature.initVerify(pubK);
-    signature.update(message);
-    System.out.println("This works, right? " + signature.verify(sign));
+signature.initVerify(pubK);
+signature.update(message);
+System.out.println("This works, right? " + signature.verify(sign));
 
-    System.out.println("Let's try changing the message...");
+System.out.println("Let's try changing the message...");
 
-    signature.update("MODIFIED!!!".getBytes());
-    System.out.println("This doesn't work, right? " + !signature.verify(sign));
+signature.update("MODIFIED!!!".getBytes());
+System.out.println("This doesn't work, right? " + !signature.verify(sign));
 ```
 
 Output:
