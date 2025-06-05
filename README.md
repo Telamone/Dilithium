@@ -16,6 +16,7 @@ For more information about the algorithm, I would recommend to visit the origina
 
 Code:
 
+```java
     Security.addProvider(new DilithiumProvider());
 
     final KeyPairGenerator kpg = KeyPairGenerator.getInstance("Dilithium");
@@ -42,6 +43,7 @@ Code:
 
     signature.update("MODIFIED!!!".getBytes());
     System.out.println("This doesn't work, right? " + !signature.verify(sign));
+```
 
 Output:
 
