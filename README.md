@@ -67,6 +67,24 @@ These are the latest (in the moment this README is updated) best results on my p
     Java's Dilithium sign:               771415 ns/ops [AVERAGE] | 384900 ns (Length: 2200) [MIN] | 3727500 ns  (Length: 2904) [MAX]
     Java's Dilithium verify:             259724 ns/ops [AVERAGE] | 251700 ns (Length: 2048) [MIN] | 407700 ns   (Length: 2816) [MAX]
 
+## Time tables
+
+Sign implementation | Min | Avg | Max
+--- | --- | --- | ---
+Telami's ThreadSafeDilithium | ~191 µs | ~74 µs | ~46 ms
+Telami's Dilithium | ~123 µs | ~403 µs | ~2 ms
+Java's Dilithium | ~385 µs | ~771 µs | ~4 ms
+
+Verify implementation | Min | Avg | Max
+--- | --- | --- | ---
+Telami's ThreadSafeDilithium | ~113 µs | ~17 µs | ~3 ms
+Telami's Dilithium | ~73 µs | ~86 µs | ~107 µs
+Java's Dilithium | ~252 µs | ~260 µs | ~408 µs
+
+> [!NOTE]
+> In my <b>ThreadSafeDilithium</b> implementation, the <b>Avarage</b> is <i>less</i> than the <b>Minimum</b>
+> because the first is considering the <b>parallelization</b> while the other not.
+
 <br>
 
 # Future work 📌
