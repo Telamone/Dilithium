@@ -1,5 +1,6 @@
 package it.telami.commons.crypto.dilithium;
 
+@SuppressWarnings("all")
 final class DilithiumPublicKeyImpl implements DilithiumPublicKey {
 	private final DilithiumParameterSpec spec;
 	final byte[] rho;

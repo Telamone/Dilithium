@@ -6,7 +6,7 @@ import java.security.SignatureSpi;
 
 @SuppressWarnings("unused")
 public final class DilithiumSignature extends SignatureSpi {
-	static final int initialSize = Integer.getInteger("DilithiumSignatureUpdateBufferSize", 1735);
+	static final int initialSize = Integer.getInteger("DilithiumSignatureUpdateBufferSize", 4373);
 	static final boolean shouldZero = Boolean.getBoolean("DilithiumSignatureShouldZero");
 
 	private DilithiumPublicKeyImpl pubKey;

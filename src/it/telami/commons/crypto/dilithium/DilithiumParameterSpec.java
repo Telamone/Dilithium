@@ -2,7 +2,7 @@ package it.telami.commons.crypto.dilithium;
 
 import java.security.spec.AlgorithmParameterSpec;
 
-@SuppressWarnings("unused")
+@SuppressWarnings("all")
 public final class DilithiumParameterSpec implements AlgorithmParameterSpec {
 	public final String name;
 	public final int k;

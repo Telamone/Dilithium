@@ -162,6 +162,7 @@ final class Digest {
             0x8000000000008003L, 0x8000000000008002L, 0x8000000000000080L, 0x000000000000800aL, 0x800000008000000aL,
             0x8000000080008081L, 0x8000000000008080L, 0x0000000080000001L, 0x8000000080008008L
     };
+    @SuppressWarnings("DuplicatedCode")
     private static void permute (final long[] a) {
         long    a00 = a[ 0], a01 = a[ 1], a02 = a[ 2], a03 = a[ 3], a04 = a[ 4],
                 a05 = a[ 5], a06 = a[ 6], a07 = a[ 7], a08 = a[ 8], a09 = a[ 9],

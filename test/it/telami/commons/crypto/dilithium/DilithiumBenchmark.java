@@ -13,13 +13,13 @@ import java.util.stream.IntStream;
 
 final class DilithiumBenchmark {
 
-    /* Best Benchmark Result (i7 10700k | 4.7 Ghz | All cores):
-     * Telami's ThreadSafeDilithium sign:   70696 ns/ops
-     * Telami's ThreadSafeDilithium verify: 14219 ns/ops
-     * Telami's Dilithium sign:             383210 ns/ops
-     * Telami's Dilithium verify:           79012 ns/ops
-     * Java's Dilithium sign:               767563 ns/ops
-     * Java's Dilithium verify:             255607 ns/ops
+    /* Best Benchmark Result (i7 10700k | 4.7 Ghz | All cores) [With data aligned]:
+     * Telami's ThreadSafeDilithium sign:   73860 ns/ops  [AVERAGE] | 191400 ns (Length: 2232) [MIN] | 45536600 ns (Length: 3424) [MAX]
+     * Telami's ThreadSafeDilithium verify: 17803 ns/ops  [AVERAGE] | 113100 ns (Length: 2048) [MIN] | 2955600 ns  (Length: 3288) [MAX]
+     * Telami's Dilithium sign:             403489 ns/ops [AVERAGE] | 123400 ns (Length: 3064) [MIN] | 1907800 ns  (Length: 3640) [MAX]
+     * Telami's Dilithium verify:           86129 ns/ops  [AVERAGE] | 72600 ns  (Length: 2976) [MIN] | 107200 ns   (Length: 3648) [MAX]
+     * Java's Dilithium sign:               771415 ns/ops [AVERAGE] | 384900 ns (Length: 2200) [MIN] | 3727500 ns  (Length: 2904) [MAX]
+     * Java's Dilithium verify:             259724 ns/ops [AVERAGE] | 251700 ns (Length: 2048) [MIN] | 407700 ns   (Length: 2816) [MAX]
      */
 
     public static void main (final String[] ignored) throws Throwable {
@@ -39,15 +39,18 @@ final class DilithiumBenchmark {
                     .generate(ThreadLocalRandom.current()::nextInt)
                     .parallel()
                     .mapToObj(i -> {
-                        final ThreadLocalRandom random = ThreadLocalRandom.current();
-                        final byte[] a = new byte[i &= 0x7f8];
+                        final byte[] a = new byte[i = (i & 0x7f8) + 0x800];
                         while ((i -= 8) >= 0)
-                            arrayView.set(a, i, random.nextLong());
+                            arrayView.set(a, i, ThreadLocalRandom.current().nextLong());
                         return a;
                     })
                     .limit(TEST_CASES)
                     .toArray(byte[][]::new);
         }   //Free 'arrayView'!
+
+        //Search for minimum and maximum times (with their respective lengths)
+        //Harms the benchmark a little, but the operation is cheap
+        final long[] timesAndLengths = new long[TEST_CASES - WARMUP_ITERATIONS];
 
         //Thread-safe library algorithm setup
         final ForkJoinPool threadPool = new ForkJoinPool(Runtime.getRuntime().availableProcessors() - 1);
@@ -60,29 +63,33 @@ final class DilithiumBenchmark {
         signature.initSign(prvK);
 
         //Result
-        System.out.println("Telami's ThreadSafeDilithium sign:   " + (benchmarkParallelSign(
+        System.out.print("Telami's ThreadSafeDilithium sign:   " + (benchmarkParallelSign(
                 threadPool,
                 WARMUP_ITERATIONS,
                 TEST_CASES,
                 signature,
                 testCases,
-                signs)
+                signs,
+                timesAndLengths)
                 / (TEST_CASES - WARMUP_ITERATIONS))
                 + " ns/ops");
+        System.out.println(extractResult(timesAndLengths));
 
         //Switch to verification
         signature.initVerify(pubK);
 
         //Result
-        System.out.println("Telami's ThreadSafeDilithium verify: " + (benchmarkParallelVerification(
+        System.out.print("Telami's ThreadSafeDilithium verify: " + (benchmarkParallelVerification(
                 threadPool,
                 WARMUP_ITERATIONS,
                 TEST_CASES,
                 signature,
                 testCases,
-                signs)
+                signs,
+                timesAndLengths)
                 / (TEST_CASES - WARMUP_ITERATIONS))
                 + " ns/ops");
+        System.out.println(extractResult(timesAndLengths));
 
         //Cleaning
         threadPool.close();
@@ -97,27 +104,31 @@ final class DilithiumBenchmark {
         signature.initSign(prvK);
 
         //Result
-        System.out.println("Telami's Dilithium sign:             " + (benchmarkSign(
+        System.out.print("Telami's Dilithium sign:             " + (benchmarkSign(
                 WARMUP_ITERATIONS,
                 TEST_CASES,
                 signature,
                 testCases,
-                signs)
+                signs,
+                timesAndLengths)
                 / (TEST_CASES - WARMUP_ITERATIONS))
                 + " ns/ops");
+        System.out.println(extractResult(timesAndLengths));
 
         //Switch to verification
         signature.initVerify(pubK);
 
         //Result
-        System.out.println("Telami's Dilithium verify:           " + (benchmarkVerification(
+        System.out.print("Telami's Dilithium verify:           " + (benchmarkVerification(
                 WARMUP_ITERATIONS,
                 TEST_CASES,
                 signature,
                 testCases,
-                signs)
+                signs,
+                timesAndLengths)
                 / (TEST_CASES - WARMUP_ITERATIONS))
                 + " ns/ops");
+        System.out.println(extractResult(timesAndLengths));
 
         //Java algorithm setup
         kpg = KeyPairGenerator.getInstance("ML-DSA");
@@ -129,27 +140,31 @@ final class DilithiumBenchmark {
         signature.initSign(prvK);
 
         //Result
-        System.out.println("Java's Dilithium sign:               " + (benchmarkSign(
+        System.out.print("Java's Dilithium sign:               " + (benchmarkSign(
                 WARMUP_ITERATIONS,
                 TEST_CASES,
                 signature,
                 testCases,
-                signs)
+                signs,
+                timesAndLengths)
                 / (TEST_CASES - WARMUP_ITERATIONS))
                 + " ns/ops");
+        System.out.println(extractResult(timesAndLengths));
 
         //Switch to verification
         signature.initVerify(pubK);
 
         //Result
-        System.out.println("Java's Dilithium verify:             " + (benchmarkVerification(
+        System.out.print("Java's Dilithium verify:             " + (benchmarkVerification(
                 WARMUP_ITERATIONS,
                 TEST_CASES,
                 signature,
                 testCases,
-                signs)
+                signs,
+                timesAndLengths)
                 / (TEST_CASES - WARMUP_ITERATIONS))
                 + " ns/ops");
+        System.out.println(extractResult(timesAndLengths));
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -158,7 +173,8 @@ final class DilithiumBenchmark {
                                                final int TEST_CASES,
                                                final Signature signature,
                                                final byte[][] testCases,
-                                               final byte[][] signs) {
+                                               final byte[][] signs,
+                                               final long[] timesAndLengths) {
         int i = 0;
         //Warmup
         while (i < WARMUP_ITERATIONS) {
@@ -180,8 +196,10 @@ final class DilithiumBenchmark {
             final int j = i++;
             threadPool.execute(() -> {
                 try {
+                    final long t = System.nanoTime();
                     signature.update(testCases[j]);
                     signs[j] = signature.sign();
+                    timesAndLengths[j - WARMUP_ITERATIONS] = System.nanoTime() - t | (long) testCases[j].length << 52;
                 } catch (final Throwable t) {
                     throw new RuntimeException(t);
                 }
@@ -197,7 +215,8 @@ final class DilithiumBenchmark {
                                                        final int TEST_CASES,
                                                        final Signature signature,
                                                        final byte[][] testCases,
-                                                       final byte[][] signs) {
+                                                       final byte[][] signs,
+                                                       final long[] timesAndLengths) {
         int i = 0;
         final AtomicBoolean verified = new AtomicBoolean(true);
         //Warmup
@@ -220,8 +239,10 @@ final class DilithiumBenchmark {
             final int j = i++;
             threadPool.execute(() -> {
                 try {
+                    final long t = System.nanoTime();
                     signature.update(testCases[j]);
                     verified.compareAndSet(true, signature.verify(signs[j]));
+                    timesAndLengths[j - WARMUP_ITERATIONS] = System.nanoTime() - t | (long) testCases[j].length << 52;
                 } catch (final Throwable t) {
                     throw new RuntimeException(t);
                 }
@@ -240,7 +261,8 @@ final class DilithiumBenchmark {
                                        final int TEST_CASES,
                                        final Signature signature,
                                        final byte[][] testCases,
-                                       final byte[][] signs) throws Throwable {
+                                       final byte[][] signs,
+                                       final long[] timesAndLengths) throws Throwable {
         int i = 0;
         //Warmup
         while (i < WARMUP_ITERATIONS) {
@@ -250,8 +272,10 @@ final class DilithiumBenchmark {
         final long start = System.nanoTime();
         //Benchmark
         while (i < TEST_CASES) {
+            final long t = System.nanoTime();
             signature.update(testCases[i]);
-            signs[i++] = signature.sign();
+            signs[i] = signature.sign();
+            timesAndLengths[i - WARMUP_ITERATIONS] = System.nanoTime() - t | (long) testCases[i++].length << 52;
         }
         return System.nanoTime() - start;
     }
@@ -260,7 +284,8 @@ final class DilithiumBenchmark {
                                                final int TEST_CASES,
                                                final Signature signature,
                                                final byte[][] testCases,
-                                               final byte[][] signs) throws Throwable {
+                                               final byte[][] signs,
+                                               final long[] timesAndLengths) throws Throwable {
         int i = 0;
         boolean verified = true;
         //Warmup
@@ -271,12 +296,37 @@ final class DilithiumBenchmark {
         long start = System.nanoTime();
         //Benchmark
         while (i < TEST_CASES) {
+            final long t = System.nanoTime();
             signature.update(testCases[i]);
-            verified &= signature.verify(signs[i++]);
+            verified &= signature.verify(signs[i]);
+            timesAndLengths[i - WARMUP_ITERATIONS] = System.nanoTime() - t | (long) testCases[i++].length << 52;
         }
         start = System.nanoTime() - start;
         if (!verified)
             System.out.println("Error (non-verified)!");
         return start;
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private static String extractResult (final long[] timesAndLengths) {
+        //Too lazy for using parallel streams :p
+        if (timesAndLengths.length == 0)
+            return "";
+        int min = 0, max = 0;
+        for (int i = 1; i < timesAndLengths.length; i++) {
+            if ((timesAndLengths[i] & 0xfffffffffffffL) < (timesAndLengths[min] & 0xfffffffffffffL))
+                min = i;
+            if ((timesAndLengths[i] & 0xfffffffffffffL) > (timesAndLengths[max] & 0xfffffffffffffL))
+                max = i;
+        }
+        return " [AVERAGE] | "
+                + (timesAndLengths[min] & 0xfffffffffffffL)
+                + " ns (Length: "
+                + (timesAndLengths[min] >>> 52)
+                + ") [MIN] | "
+                + (timesAndLengths[max] & 0xfffffffffffffL)
+                + " ns (Length: "
+                + (timesAndLengths[max] >>> 52)
+                + ") [MAX]";
     }
 }
