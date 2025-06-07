@@ -13,6 +13,17 @@ final class Digest {
         rate = 1600 - (bits << 1);
         notSqueezing = true;
     }
+    Digest clear () {
+        int i = -1;
+        while (++i < 25)
+            state[i] = 0L;
+        i = -1;
+        while (++i < 192)
+            dataQueue[i] = (byte) 0;
+        bitsInQueue = 0;
+        notSqueezing = true;
+        return this;
+    }
 
     void doOutput (final byte[] out,
                    final int outOff,
@@ -24,8 +35,6 @@ final class Digest {
         squeeze(out, outOff, (long) outLen << 3);
     }
     void update (final byte[] data, final int len) {
-        final long[] state = this.state;
-        final byte[] dataQueue = this.dataQueue;
         final int bytesInQueue, rateBytes, available;
         available = (rateBytes = rate >>> 3) -
                 (bytesInQueue = bitsInQueue >>> 3);
@@ -80,14 +89,22 @@ final class Digest {
                           final long outputLength) {
         if (notSqueezing)
             padAndSwitchToSqueezingPhase();
-        long i = 0;
-        final long[] state = this.state;
-        final byte[] dataQueue = this.dataQueue;
-        final int rate = this.rate;
+        long i = 0L;
         int bitsInQueue = this.bitsInQueue;
         while (i < outputLength) {
             final int partialBlock;
-            if (bitsInQueue == 0) {
+            if (bitsInQueue != 0) {
+                partialBlock = (int) Math.min(
+                        bitsInQueue,
+                        outputLength - i);
+                System.arraycopy(
+                        dataQueue,
+                        (rate - bitsInQueue) >> 3,
+                        output,
+                        offset + (int) (i >> 3),
+                        partialBlock >> 3);
+                bitsInQueue -= partialBlock;
+            } else {
                 permute(state);
                 longToLittleEndian(
                         state,
@@ -103,36 +120,22 @@ final class Digest {
                         offset + (int) (i >> 3),
                         partialBlock >> 3);
                 bitsInQueue = rate - partialBlock;
-            } else {
-                partialBlock = (int) Math.min(
-                        bitsInQueue,
-                        outputLength - i);
-                System.arraycopy(
-                        dataQueue,
-                        (rate - bitsInQueue) >> 3,
-                        output,
-                        offset + (int) (i >> 3),
-                        partialBlock >> 3);
-                bitsInQueue -= partialBlock;
             }
             i += partialBlock;
         }
         this.bitsInQueue = bitsInQueue;
     }
     private void padAndSwitchToSqueezingPhase () {
-        final long[] state = this.state;
-        final byte[] dataQueue = this.dataQueue;
-        final int rate = this.rate;
-        int biq = bitsInQueue;
-        dataQueue[biq >>> 3] |= (byte) (1 << (biq & 7));
-        if (++biq == rate)
-            xorAndPermute(state, dataQueue, 0, biq >>> 6);
+        int bitsInQueue = this.bitsInQueue;
+        dataQueue[bitsInQueue >>> 3] |= (byte) (1 << (bitsInQueue & 7));
+        if (++bitsInQueue == rate)
+            xorAndPermute(state, dataQueue, 0, bitsInQueue >>> 6);
         else {
-            final int full = biq >>> 6;
+            final int full = bitsInQueue >>> 6;
             int off = 0;
             for (int i = 0; i < full; ++i, off += 8)
                 state[i] ^= littleEndianToLong(dataQueue, off);
-            final int partial = biq & 63;
+            final int partial = bitsInQueue & 63;
             if (partial != 0)
                 state[full] ^= (1L
                         << partial)
@@ -141,7 +144,7 @@ final class Digest {
                         (dataQueue, off);
         }
         state[rate - 1 >>> 6] ^= 0x8000000000000000L;
-        bitsInQueue = 0;
+        this.bitsInQueue = 0;
         notSqueezing = false;
     }
 

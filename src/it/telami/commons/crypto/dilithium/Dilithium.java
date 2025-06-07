@@ -4,11 +4,12 @@ import java.security.KeyPair;
 
 final class Dilithium {
 	static KeyPair generateKeyPair (final DilithiumParameterSpec spec, final byte[] seed) {
+		final Digest s;
 		byte[] pu;
 		final int tilde;
 		final byte[] rho, k;
 		byte[] pr;
-		System.arraycopy(pu = Utils.getSHAKE256Digest(((tilde = spec.tilde) << 1) + 64, seed), 0, rho = new byte[tilde], 0, tilde);
+		System.arraycopy(pu = Utils.getSHAKE256Digest(((tilde = spec.tilde) << 1) + 64, seed, s = new Digest(256)), 0, rho = new byte[tilde], 0, tilde);
 		System.arraycopy(pu, tilde + 64, k = new byte[tilde], 0, tilde);
 		System.arraycopy(pu, tilde, pr = new byte[64], 0, 64);
 		final PolyVec[] a = expandA(rho, spec.k, spec.l);
@@ -23,17 +24,18 @@ final class Dilithium {
 				.powerRound();
 		return new KeyPair(
 				new DilithiumPublicKeyImpl(spec, rho, t1, pu = PackingUtils.packPubKey(tilde, rho, t1), a),
-				new DilithiumPrivateKeyImpl(spec, rho, k, pr = Utils.crh(pu), s1, s2, res, PackingUtils.packPrvKey(spec.eta, tilde, rho, k, pr, s1, s2, res), a, s1hat, s2.ntt(), res.ntt()));
+				new DilithiumPrivateKeyImpl(spec, rho, k, pr = Utils.crh(pu, s.clear()), s1, s2, res, PackingUtils.packPrvKey(spec.eta, tilde, rho, k, pr, s1, s2, res), a, s1hat, s2.ntt(), res.ntt()));
 	}
 	
 	static byte[] sign (final DilithiumPrivateKeyImpl prv,
 						final byte[] m,
 						final int len) {
 		final DilithiumParameterSpec spec;
+		final Digest s;
 		final byte[] sig
 				= new byte[Utils.getSigLength(spec = prv.getSpec())], mu, rhoPrime
 				= Utils.getSHAKE256Digest(64, prv.k, mu
-				= Utils.getSHAKE256Digest(64, prv.tr, m, len), 64);
+				= Utils.getSHAKE256Digest(64, prv.tr, m, len, s = new Digest(256)), 64, s.clear());
 		final PolyVec[] a = prv.a;
 		final int
 				mul = mu.length,
@@ -50,7 +52,6 @@ final class Dilithium {
 				s2 = prv.s2Hat,
 				t0 = prv.t0Hat;
 		PolyVec z, y, w, res;
-		Digest s;
 		Poly cp;
 		Hints h;
 		for (;;) {
@@ -65,7 +66,7 @@ final class Dilithium {
 							.c_ADD_q())
 							.decompose(g2),
 					sig);
-			(s = new Digest(256)).update(mu, mul);
+			s.clear().update(mu, mul);
 			s.update(sig, res
 					.poly
 					.length
@@ -74,7 +75,7 @@ final class Dilithium {
 			s.doOutput(sig, 0, tilde);
 			if ((z = s1.copyAndPointWiseMontgomery(cp
 					= generateChallenge
-					(tilde, tau, sig)
+					(tilde, tau, sig, s.clear())
 					.ntt()))
 					.invNTTtoMont()
 					.add(y)
@@ -146,6 +147,7 @@ final class Dilithium {
 		for (int j = n; j < omega; j++)
 			if (sig[off + j] != 0)
 				throw new DilithiumSignatureVerificationException("Non ending signature");
+		final Digest s;
 		z = useHint(g2, z
 				.ntt()
 				.mulMatrixPointWiseMontgomery(pk.a)
@@ -156,15 +158,16 @@ final class Dilithium {
 								generateChallenge(
 										tilde,
 										spec.tau,
-										cappedSign)
+										cappedSign,
+										s = new Digest(256))
 										.ntt()))
 				.reduce()
 				.invNTTtoMont()
 				.c_ADD_q(), h);
-		mu = Utils.getSHAKE256Digest(64, Utils.crh(pk.getEncoded()), m, len);
+		mu = Utils.getSHAKE256Digest(64, Utils.crh(pk.getEncoded(), s.clear()), m, len, s.clear());
 		buf = new byte[PackingUtils.getPolyW1PackedBytes(g2) * z.poly.length];
 		PackingUtils.packW1(g2, z, buf);
-		c2 = Utils.getSHAKE256Digest(tilde, mu, buf, buf.length);
+		c2 = Utils.getSHAKE256Digest(tilde, mu, buf, buf.length, s.clear());
 		for (int i = 0; i < tilde; i++)
 			if (cappedSign[i] != c2[i])
 				return false;
@@ -174,13 +177,14 @@ final class Dilithium {
 	static PolyVec[] expandA (final byte[] rho,
 							  final int k,
 							  final int l) {
+		final Digest s = new Digest(128);
 		final PolyVec[] a = new PolyVec[k];
 		int i = -1, j;
 		while (++i < k) {
 			a[i] = new PolyVec(l);
 			j = -1;
 			while (++j < l)
-				a[i].poly[j] = Poly.genUniformRandom(rho, (i << 8) + j);
+				a[i].poly[j] = Poly.genUniformRandom(s, rho, j + (i << 8));
 		}
 		return a;
 	}
@@ -275,13 +279,13 @@ final class Dilithium {
 
 	private static Poly generateChallenge (final int tilde,
 										   final int tau,
-										   final byte[] seed) {
+										   final byte[] seed,
+										   final Digest s) {
 		final Poly pre = new Poly();
 		int b, pos;
 		long signs;
 		final byte[] buf;
-		final Digest s;
-		(s = new Digest(256)).update(seed, tilde);
+		s.update(seed, tilde);
 		s.doOutput(buf = new byte[136], 0, 136);
 		signs = 0L;
 		for (int i = 0; i < 8; i++)

@@ -9,6 +9,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 import java.util.stream.IntStream;
 
 final class DilithiumBenchmark {
@@ -309,9 +310,11 @@ final class DilithiumBenchmark {
 
     @SuppressWarnings("SameParameterValue")
     private static String extractResult (final long[] timesAndLengths) {
-        //Too lazy for using parallel streams :p
+        //The queue is empty, but the other threads might not have finished their work!
+        LockSupport.parkNanos(100_000_000L);
         if (timesAndLengths.length == 0)
             return "";
+        //Too lazy for using parallel streams :p
         int min = 0, max = 0;
         for (int i = 1; i < timesAndLengths.length; i++) {
             if ((timesAndLengths[i] & 0xfffffffffffffL) < (timesAndLengths[min] & 0xfffffffffffffL))

@@ -150,10 +150,9 @@ final class Poly {
 	private static int reduce (final long a) {
 		return (int) ((a + (int) (a * 0x3802001L) * 0xffffffffff801fffL) >> 32);
 	}
-	static Poly genUniformRandom (final byte[] rho, final int nonce) {
+	static Poly genUniformRandom (final Digest s, final byte[] rho, final int nonce) {
 		int ctr, off, bufLen = 840;
-		final Digest s;
-		(s = new Digest(128)).update(rho, rho.length);
+		s.clear().update(rho, rho.length);
 		s.update(new byte[] {
 				(byte) (nonce & 0xff),
 				(byte) ((nonce >> 8) & 0xff)
