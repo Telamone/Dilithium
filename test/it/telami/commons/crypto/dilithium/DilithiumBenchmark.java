@@ -14,21 +14,21 @@ import java.util.stream.IntStream;
 
 final class DilithiumBenchmark {
 
-    /* Best Benchmark Result (i7 10700k | 4.7 Ghz | All cores) [With data aligned]:
-     * Telami's ThreadSafeDilithium sign:   73860 ns/ops  [AVERAGE] | 191400 ns (Length: 2232) [MIN] | 45536600 ns (Length: 3424) [MAX]
-     * Telami's ThreadSafeDilithium verify: 17803 ns/ops  [AVERAGE] | 113100 ns (Length: 2048) [MIN] | 2955600 ns  (Length: 3288) [MAX]
-     * Telami's Dilithium sign:             403489 ns/ops [AVERAGE] | 123400 ns (Length: 3064) [MIN] | 1907800 ns  (Length: 3640) [MAX]
-     * Telami's Dilithium verify:           86129 ns/ops  [AVERAGE] | 72600 ns  (Length: 2976) [MIN] | 107200 ns   (Length: 3648) [MAX]
-     * Java's Dilithium sign:               771415 ns/ops [AVERAGE] | 384900 ns (Length: 2200) [MIN] | 3727500 ns  (Length: 2904) [MAX]
-     * Java's Dilithium verify:             259724 ns/ops [AVERAGE] | 251700 ns (Length: 2048) [MIN] | 407700 ns   (Length: 2816) [MAX]
+    /* Last Benchmark Result (i7 10700k | 4.7 Ghz | All cores) [Output aligned manually]:
+     * Telami's ThreadSafeDilithium sign:   73633 ns/ops  [AVERAGE] | 147900 ns (Length: 2488) [MIN] | 38823700 ns (Length: 3512) [MAX]
+     * Telami's ThreadSafeDilithium verify: 14452 ns/ops  [AVERAGE] | 93800 ns  (Length: 2144) [MIN] | 11538000 ns (Length: 2592) [MAX]
+     * Telami's Dilithium sign:             425841 ns/ops [AVERAGE] | 120500 ns (Length: 2304) [MIN] | 14040400 ns (Length: 2912) [MAX]
+     * Telami's Dilithium verify:           86517 ns/ops  [AVERAGE] | 68200 ns  (Length: 2176) [MIN] | 8511200 ns  (Length: 3504) [MAX]
+     * Java's Dilithium sign:               783274 ns/ops [AVERAGE] | 375300 ns (Length: 2064) [MIN] | 16404500 ns (Length: 2936) [MAX]
+     * Java's Dilithium verify:             255352 ns/ops [AVERAGE] | 243600 ns (Length: 2080) [MIN] | 9440400 ns  (Length: 2088) [MAX]
      */
 
     public static void main (final String[] ignored) throws Throwable {
         Security.addProvider(new DilithiumProvider());
 
         //Utils
-        final int WARMUP_ITERATIONS = 31_000;
-        final int TEST_CASES = 1_000 + WARMUP_ITERATIONS;
+        final int WARMUP_ITERATIONS = 50_000;
+        final int TEST_CASES = 50_000 + WARMUP_ITERATIONS;
         //Don't specify '4627' or it will initialize all the internal arrays!
         byte[][] signs = new byte[TEST_CASES][];
 
